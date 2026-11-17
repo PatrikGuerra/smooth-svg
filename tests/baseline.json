@@ -1,0 +1,37 @@
+{
+ "drawing.png": {
+  "ssim": 0.9751,
+  "paths": 4,
+  "colors": 2,
+  "kb": 7.3,
+  "ms": 27
+ },
+ "logo.png": {
+  "ssim": 0.981,
+  "paths": 5,
+  "colors": 4,
+  "kb": 7.9,
+  "ms": 21
+ },
+ "lowres.jpg": {
+  "ssim": 0.86,
+  "paths": 78,
+  "colors": 77,
+  "kb": 50.1,
+  "ms": 11
+ },
+ "photo.jpg": {
+  "ssim": 0.7379,
+  "paths": 1,
+  "colors": 1,
+  "kb": 0.3,
+  "ms": 42
+ },
+ "pixelart_16.png": {
+  "ssim": 0.19,
+  "paths": 5,
+  "colors": 5,
+  "kb": 2.0,
+  "ms": 1
+ }
+}
