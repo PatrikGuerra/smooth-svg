@@ -13,6 +13,16 @@ def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] == ["bench"]:
         return bench(Path(argv[1]) if len(argv) > 1 else SAMPLES)
+    if argv[:1] == ["--ui"]:
+        import threading
+        import webbrowser
+
+        import uvicorn
+
+        url = "http://127.0.0.1:8765"
+        threading.Timer(1.0, webbrowser.open, args=[url]).start()
+        uvicorn.run("smoothsvg.server:app", host="127.0.0.1", port=8765)
+        return 0
     p = argparse.ArgumentParser(prog="smoothsvg", description="PNG/JPG to simple SVG")
     p.add_argument("input", type=Path, help="image file or folder (or: bench [folder])")
     p.add_argument("-o", "--output", type=Path, help="svg file, or folder for batch")

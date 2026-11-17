@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>smooth-svg</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f4f4f5; --fg:#18181b; --card:#fff; --line:#d4d4d8; --accent:#2563eb; }
+  :root[data-theme=dark] { --bg:#18181b; --fg:#f4f4f5; --card:#27272a; --line:#3f3f46; --accent:#60a5fa; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme=light]) { --bg:#18181b; --fg:#f4f4f5; --card:#27272a; --line:#3f3f46; --accent:#60a5fa; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px system-ui,sans-serif; background:var(--bg); color:var(--fg); height:100vh; display:flex; flex-direction:column; }
+  header, footer, #panel { background:var(--card); border-color:var(--line); }
+  header { display:flex; gap:12px; align-items:center; padding:8px 12px; border-bottom:1px solid var(--line); }
+  header h1 { font-size:15px; margin:0; flex:1; }
+  button, label.btn { background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:5px 10px; cursor:pointer; font:inherit; }
+  button:hover, label.btn:hover { border-color:var(--accent); }
+  main { flex:1; display:flex; min-height:0; }
+  #panel { width:220px; padding:12px; border-right:1px solid var(--line); display:flex; flex-direction:column; gap:12px; }
+  #panel label { display:flex; flex-direction:column; gap:4px; }
+  #views { flex:1; display:flex; min-width:0; position:relative; }
+  .pane { flex:1; overflow:hidden; position:relative; border-right:1px solid var(--line); cursor:grab;
+          background:repeating-conic-gradient(#8881 0 25%, transparent 0 50%) 0 0/16px 16px; }
+  .pane:active { cursor:grabbing; }
+  .pane .tag { position:absolute; top:6px; left:8px; z-index:3; font-size:12px; opacity:.7; pointer-events:none; }
+  .layer { position:absolute; left:0; top:0; transform-origin:0 0; }
+  #inImg { image-rendering:pixelated; display:block; }
+  #svgBox svg { display:block; }
+  body.wipe #views { display:block; }
+  body.wipe .pane { position:absolute; inset:0; border:0; }
+  body.wipe #outPane { clip-path: inset(0 0 0 var(--wipe,50%)); }
+  #wipeBar { display:none; position:absolute; top:0; bottom:0; width:2px; background:var(--accent); z-index:4; left:var(--wipe,50%); pointer-events:none; }
+  body.wipe #wipeBar { display:block; }
+  #drop { position:absolute; inset:0; display:grid; place-items:center; opacity:.6; pointer-events:none; }
+  footer { padding:6px 12px; border-top:1px solid var(--line); display:flex; gap:16px; align-items:center; }
+  footer .sp { flex:1; }
+  .err { color:#dc2626; }
+</style>
+</head>
+<body>
+<header>
+  <h1>smooth-svg</h1>
+  <label class="btn">Open image<input id="file" type="file" accept="image/png,image/jpeg" hidden></label>
+  <button id="wipeBtn">Wipe mode</button>
+  <button id="themeBtn">Theme</button>
+</header>
+<main>
+  <div id="panel">
+    <label>Min speckle <b id="v_speckle">4</b><input id="speckle" type="range" min="0" max="64" value="4"></label>
+    <label>Color precision <b id="v_prec">6</b><input id="prec" type="range" min="1" max="8" value="6"></label>
+    <label>Corner threshold <b id="v_corner">60</b><input id="corner" type="range" min="0" max="180" value="60"></label>
+    <div>Wheel: zoom<br>Drag: pan<br>Double click: reset</div>
+  </div>
+  <div id="views">
+    <div class="pane" id="inPane"><span class="tag">Input</span><div class="layer" id="inLayer"><img id="inImg" alt=""></div></div>
+    <div class="pane" id="outPane"><span class="tag">SVG</span><div class="layer" id="svgBox"></div></div>
+    <div id="wipeBar"></div>
+    <div id="drop">Drop a PNG or JPG here</div>
+  </div>
+</main>
+<footer>
+  <span id="stats">No image</span><span class="sp"></span>
+  <input id="wipe" type="range" min="0" max="100" value="50" hidden title="Wipe position">
+  <button id="dl" disabled>Download SVG</button><button id="cp" disabled>Copy SVG</button>
+</footer>
+<script src="/static/app.js"></script>
+</body>
+</html>

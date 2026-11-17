@@ -9,15 +9,27 @@ ALLOWED = {".png", ".jpg", ".jpeg"}
 MAX_PIXELS = 16_000_000
 
 
+def _decode(im: Image.Image) -> np.ndarray:
+    if im.width * im.height > MAX_PIXELS:
+        raise ValueError(f"image too large ({im.width}x{im.height}), max {MAX_PIXELS} px")
+    return np.asarray(ImageOps.exif_transpose(im).convert("RGBA"))
+
+
 def load(path: str | Path) -> np.ndarray:
     """Read a PNG/JPG as an RGBA array. Flattens nothing; honors EXIF rotation."""
     path = Path(path)
     if path.suffix.lower() not in ALLOWED:
         raise ValueError(f"only PNG/JPG accepted, got {path.suffix!r}")
     with Image.open(path) as im:
-        if im.width * im.height > MAX_PIXELS:
-            raise ValueError(f"image too large ({im.width}x{im.height}), max {MAX_PIXELS} px")
-        return np.asarray(ImageOps.exif_transpose(im).convert("RGBA"))
+        return _decode(im)
+
+
+def load_bytes(data: bytes) -> np.ndarray:
+    """Same as load, for uploads. Checks the real format, not the file name."""
+    with Image.open(io.BytesIO(data)) as im:
+        if im.format not in ("PNG", "JPEG"):
+            raise ValueError(f"only PNG/JPG accepted, got {im.format}")
+        return _decode(im)
 
 
 def trace(img: np.ndarray, **opts) -> str:
