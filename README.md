@@ -110,6 +110,14 @@ load -> classify -> denoise -> k-means colors (Lab) -> drop tiny islands
 - `smoothsvg/pipeline.py` has the steps, `presets.py` has the model table, `classify.py` picks the
   model, `drawing.py` is the Potrace path, `server.py` and `static/` are the UI.
 
+## Layers
+
+Each color is traced as its own stacked layer (`trace_stacked` in `drawing.py`). Where an upper layer
+reaches the outer edge, the layer under it is pulled back a few pixels, so a thin line of the lower
+color does not peek out along the edge. The older vtracer color mode had this flaw (a green line
+along the dark spikes of the DinoDino logo). The cost: on noisy JPGs the result is a little rougher
+and the files a little bigger (low-res JPG SSIM 0.866 to 0.818; DinoDino 39 KB to 52 KB).
+
 ## Limits
 
 - Smooth gradients and photos become color bands. A photo is not the target of this tool.

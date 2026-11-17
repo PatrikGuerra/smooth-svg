@@ -1,3 +1,5 @@
+import re
+
 import cv2
 import numpy as np
 import potrace
@@ -92,4 +94,70 @@ def trace_layers(q: np.ndarray, palette_rgb: np.ndarray, alphamax: float = 1.0,
         d = _d(plist)
         if d:
             out.append(f'<path fill="{_hex(palette_rgb[i])}" fill-rule="evenodd" d="{d}"/>')
+    return "".join(out)
+
+
+def _filled_area(mask: np.ndarray) -> int:
+    """Pixels inside the outer outlines of a mask, holes included."""
+    cs, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    canvas = np.zeros(mask.shape, np.uint8)
+    cv2.drawContours(canvas, cs, -1, 1, -1)
+    return int(canvas.sum())
+
+
+def _mask_png(mask: np.ndarray) -> bytes:
+    """Black shape on white, as PNG bytes, for vtracer's binary mode."""
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.fromarray(np.where(mask, 0, 255).astype(np.uint8)).convert("RGBA").save(buf, "PNG")
+    return buf.getvalue()
+
+
+def trace_stacked(q: np.ndarray, palette_rgb: np.ndarray, **vt) -> str:
+    """Trace each color as its own stacked layer with vtracer, and own the layering here.
+
+    Layer r covers every pixel with color rank >= r, so upper layers sit on top and nothing shows
+    between touching colors. Any order draws the right picture; colors are sorted by their area
+    with holes filled, so a ring (like a halo) goes under the shape it surrounds and stays smooth. Where an upper layer reaches the outer
+    edge of the drawing, the lower layer is pulled back a few pixels under it. Without that, the
+    two outlines are fitted separately and a thin line of the lower color peeks out.
+    Returns the <path> elements, in the pixel space of q.
+    """
+    import vtracer
+
+    rgb = q[..., :3]
+    solid = q[..., 3] >= 128
+    idx = np.full(q.shape[:2], -1, np.int32)
+    counts = []
+    for i, c in enumerate(palette_rgb):
+        m = (rgb == c).all(axis=2) & solid
+        idx[m] = i
+        counts.append(int(m.sum()))
+    filled = [_filled_area(idx == i) if counts[i] else 0 for i in range(len(palette_rgb))]
+    order = [int(i) for i in np.argsort(filled, kind="stable")[::-1] if counts[i] > 0]
+    rank = np.zeros(len(palette_rgb), np.int32)
+    for r, i in enumerate(order):
+        rank[i] = r
+    rk = np.where(idx >= 0, rank[idx.clip(0)], -1)
+
+    def grow(mask, px):
+        k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * px + 1, 2 * px + 1))
+        return cv2.dilate(mask.astype(np.uint8), k) > 0
+
+    near_edge = grow(~solid, vt.pop("inset", 3))  # pixels close to the outside
+    keep_collar = vt.pop("collar", 2)  # keep this much of the upper layer around its neighbour
+    out = []
+    for r, i in enumerate(order):
+        mask = rk >= r
+        if r < len(order) - 1:
+            upper = rk > r
+            mask = mask & ~(near_edge & upper & ~grow(rk == r, keep_collar))
+        svg = vtracer.convert_raw_image_to_svg(
+            _mask_png(mask), img_format="png", colormode="binary", mode="spline", **vt)
+        fill = _hex(palette_rgb[i])
+        for tag in re.findall(r"<path\b[^>]*>", svg):
+            out.append(re.sub(r'fill="[^"]*"', f'fill="{fill}"', tag))
     return "".join(out)
