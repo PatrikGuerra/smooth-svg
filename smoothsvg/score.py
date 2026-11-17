@@ -23,10 +23,12 @@ def flatten(img: np.ndarray) -> np.ndarray:
 def score(img: np.ndarray, svg: str, ms: float = 0.0) -> dict:
     h, w = img.shape[:2]
     ref, out = flatten(img), render(svg, w, h)
+    tags = re.findall(r"<path\b[^>]*>", svg)
+    fills = set(re.findall(r'fill="(#[0-9a-fA-F]{3,8})"', svg))
     return {
         "ssim": round(float(structural_similarity(ref, out, channel_axis=2)), 4),
-        "paths": len(re.findall(r"<path\b", svg)),
-        "colors": len(set(re.findall(r'fill="(#[0-9a-fA-F]{3,8})"', svg))),
+        "paths": len(tags),
+        "colors": len(fills | ({"#000"} if any("fill=" not in p for p in tags) else set())),
         "kb": round(len(svg.encode()) / 1024, 1),
         "ms": round(ms),
     }

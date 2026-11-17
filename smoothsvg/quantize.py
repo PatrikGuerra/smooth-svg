@@ -28,6 +28,7 @@ def quantize(img: np.ndarray, n: int | None = None, max_n: int = 16, merge_de: f
 
     n=None picks the count automatically. Returns (RGBA image, [(hex, share), ...]).
     """
+    cv2.setRNGSeed(0)  # kmeans picks random starts; fixed seed keeps results repeatable
     h, w = img.shape[:2]
     lab = cv2.cvtColor(img[..., :3].astype(np.float32) / 255, cv2.COLOR_RGB2LAB).reshape(-1, 3)
     solid = img[..., 3].reshape(-1) >= 128

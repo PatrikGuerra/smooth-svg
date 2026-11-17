@@ -27,6 +27,10 @@ def main(argv=None) -> int:
     p.add_argument("input", type=Path, help="image file or folder (or: bench [folder])")
     p.add_argument("-o", "--output", type=Path, help="svg file, or folder for batch")
     p.add_argument("--compare", action="store_true", help="also write <name>.compare.png")
+    p.add_argument("--smooth", type=int, default=2, choices=range(6), help="0 off, 5 most")
+    p.add_argument("--colors", type=int, help="number of colors (default: auto)")
+    p.add_argument("--min-area", type=int, help="drop color islands under N pixels")
+    p.add_argument("--remove-bg", action="store_true", help="make the background transparent")
     a = p.parse_args(argv)
 
     if a.input.is_dir():
@@ -39,7 +43,8 @@ def main(argv=None) -> int:
 
     for src, dst in pairs:
         img = load(src)
-        svg = convert_array(img)[0]
+        svg = convert_array(img, colors=a.colors, smooth=a.smooth, min_area=a.min_area,
+                            remove_bg=a.remove_bg)[0]
         dst.write_text(svg, encoding="utf-8")
         print(f"{src.name} -> {dst} ({dst.stat().st_size / 1024:.1f} KB)")
         if a.compare:

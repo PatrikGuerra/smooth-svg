@@ -1,3 +1,4 @@
+import re
 import time
 from pathlib import Path
 
@@ -27,6 +28,8 @@ async def convert(
     colors: int = Form(0),
     disabled: str = Form(""),
     smooth: int = Form(2),
+    remove_bg: bool = Form(False),
+    min_area: int = Form(0),
 ):
     data = await file.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
@@ -39,9 +42,11 @@ async def convert(
     svg, palette = convert_array(
         img,
         colors=colors or None,
-        disabled=set(disabled.split(",")),
+        disabled=set(re.findall(r"#[0-9A-Fa-f]{6}", disabled)),
         filter_speckle=filter_speckle,
         smooth=smooth,
+        remove_bg=remove_bg,
+        min_area=min_area or None,
     )
     stats = score(img, svg, (time.perf_counter() - t) * 1000)
     return {"svg": svg, "stats": stats, "palette": palette}

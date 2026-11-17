@@ -55,6 +55,7 @@ async function run() {
   fd.append("colors", $("colors").value);
   fd.append("disabled", [...off].join(","));
   fd.append("smooth", $("smooth").value);
+  fd.append("remove_bg", $("bg").checked);
   try {
     const res = await fetch("/api/convert", { method: "POST", body: fd });
     if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
@@ -105,6 +106,7 @@ window.addEventListener("drop", (e) => { e.preventDefault(); setFile(e.dataTrans
     timer = setTimeout(run, 300);
   }));
 
+$("bg").onchange = run;
 $("wipeBtn").onclick = () => {
   document.body.classList.toggle("wipe");
   $("wipe").hidden = !document.body.classList.contains("wipe");

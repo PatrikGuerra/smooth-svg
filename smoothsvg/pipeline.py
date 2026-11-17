@@ -6,7 +6,7 @@ import vtracer
 from PIL import Image, ImageOps
 
 from .quantize import quantize
-from .smooth import denoise, fit_viewbox, level, upscale
+from .smooth import border_color, denoise, fit_viewbox, level, remove_islands, shrink, upscale
 
 ALLOWED = {".png", ".jpg", ".jpeg"}
 MAX_PIXELS = 16_000_000
@@ -45,26 +45,31 @@ def trace(img: np.ndarray, **opts) -> str:
     )
 
 
-def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smooth: int = 2, **opts):
-    """Smooth, quantize to a flat palette, drop disabled colors, trace.
+def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smooth: int = 2,
+                  min_area: int | None = None, remove_bg: bool = False, **opts):
+    """Smooth, quantize to a flat palette, clean, drop disabled colors, trace, shrink.
 
-    Returns (svg, palette). filter_speckle is in original pixels.
+    Returns (svg, palette). min_area and filter_speckle are in original pixels.
     """
     h, w = img.shape[:2]
     q, palette = quantize(denoise(img) if smooth else img, colors)
     pal_rgb = np.array([[int(hx[i:i + 2], 16) for i in (1, 3, 5)] for hx, _ in palette], np.uint8)
+    if min_area is None:
+        min_area = max(1, round(0.0005 * h * w))  # 1 keeps every pixel (tiny pixel art)
+    q = remove_islands(q, pal_rgb, min_area)
+    disabled = set(disabled)
+    if remove_bg and (bg := border_color(q, palette)):
+        disabled.add(bg)
     q, k = upscale(q, pal_rgb, smooth) if len(pal_rgb) else (q, 1)
-    for hx, _ in palette:
-        if hx in disabled:
-            q[(q[..., :3] == [int(hx[i:i + 2], 16) for i in (1, 3, 5)]).all(axis=2), 3] = 0
+    for hx in disabled:
+        q[(q[..., :3] == [int(hx[i:i + 2], 16) for i in (1, 3, 5)]).all(axis=2), 3] = 0
     # color_precision=8 and layer_difference=0 keep the palette exact (vtracer discussion #83).
     # Coordinates are in upscaled px, so length_threshold grows with k; 1 decimal is enough.
     opts = {"color_precision": 8, "layer_difference": 0, "corner_threshold": level(smooth)[2],
             "path_precision": 1, "length_threshold": max(4.0, 3.0 * k), **opts}
     opts["filter_speckle"] = opts.get("filter_speckle", 1) * k
     svg = trace(q, **opts)
-    return fit_viewbox(svg, w, h, q.shape[1], q.shape[0]), palette
-
+    return shrink(fit_viewbox(svg, w, h, q.shape[1], q.shape[0])), palette
 
 def convert(path: str | Path, **opts) -> str:
     return convert_array(load(path), **opts)[0]
