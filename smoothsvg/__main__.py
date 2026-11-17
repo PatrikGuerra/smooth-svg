@@ -3,7 +3,7 @@ import json
 import sys
 from pathlib import Path
 
-from .pipeline import ALLOWED, load, trace
+from .pipeline import ALLOWED, convert_array, load
 from .score import compare_png, timed_score
 
 SAMPLES = Path(__file__).parent.parent / "tests" / "samples"
@@ -39,7 +39,7 @@ def main(argv=None) -> int:
 
     for src, dst in pairs:
         img = load(src)
-        svg = trace(img)
+        svg = convert_array(img)[0]
         dst.write_text(svg, encoding="utf-8")
         print(f"{src.name} -> {dst} ({dst.stat().st_size / 1024:.1f} KB)")
         if a.compare:
@@ -53,7 +53,7 @@ def bench(folder: Path) -> int:
     base = json.loads(base_file.read_text()) if base_file.exists() else {}
     rows, cur = [], {}
     for f in sorted(f for f in folder.iterdir() if f.suffix.lower() in ALLOWED):
-        _, s = timed_score(load(f), trace)
+        _, s = timed_score(load(f), lambda i: convert_array(i)[0])
         cur[f.name] = s
         b = base.get(f.name)
         rows.append((f.name, s, f"{s['kb'] - b['kb']:+.1f} KB, {s['ssim'] - b['ssim']:+.3f} ssim"

@@ -5,6 +5,8 @@ import numpy as np
 import vtracer
 from PIL import Image, ImageOps
 
+from .quantize import quantize
+
 ALLOWED = {".png", ".jpg", ".jpeg"}
 MAX_PIXELS = 16_000_000
 
@@ -42,5 +44,16 @@ def trace(img: np.ndarray, **opts) -> str:
     )
 
 
+def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), **opts):
+    """Quantize to a flat palette, drop disabled colors, trace. Returns (svg, palette)."""
+    q, palette = quantize(img, colors)
+    for hx, _ in palette:
+        if hx in disabled:
+            q[(q[..., :3] == [int(hx[i:i + 2], 16) for i in (1, 3, 5)]).all(axis=2), 3] = 0
+    # color_precision=8 and layer_difference=0 keep the palette exact (vtracer discussion #83)
+    opts = {"color_precision": 8, "layer_difference": 0, **opts}
+    return trace(q, **opts), palette
+
+
 def convert(path: str | Path, **opts) -> str:
-    return trace(load(path), **opts)
+    return convert_array(load(path), **opts)[0]

@@ -5,7 +5,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .pipeline import load_bytes, trace
+from .pipeline import convert_array, load_bytes
 from .score import score
 
 MAX_BYTES = 20 * 1024 * 1024
@@ -24,7 +24,8 @@ def index():
 async def convert(
     file: UploadFile = File(...),
     filter_speckle: int = Form(4),
-    color_precision: int = Form(6),
+    colors: int = Form(0),
+    disabled: str = Form(""),
     corner_threshold: int = Form(60),
 ):
     data = await file.read(MAX_BYTES + 1)
@@ -35,10 +36,12 @@ async def convert(
     except Exception as e:  # PIL raises many types for bad files
         raise HTTPException(400, str(e)) from e
     t = time.perf_counter()
-    svg = trace(
+    svg, palette = convert_array(
         img,
+        colors=colors or None,
+        disabled=set(disabled.split(",")),
         filter_speckle=filter_speckle,
-        color_precision=color_precision,
         corner_threshold=corner_threshold,
     )
-    return {"svg": svg, "stats": score(img, svg, (time.perf_counter() - t) * 1000)}
+    stats = score(img, svg, (time.perf_counter() - t) * 1000)
+    return {"svg": svg, "stats": stats, "palette": palette}

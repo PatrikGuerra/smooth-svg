@@ -35,6 +35,9 @@
   footer { padding:6px 12px; border-top:1px solid var(--line); display:flex; gap:16px; align-items:center; }
   footer .sp { flex:1; }
   .err { color:#dc2626; }
+  #palette { display:flex; flex-wrap:wrap; gap:6px; }
+  #palette button { width:26px; height:26px; padding:0; border-radius:50%; border:2px solid var(--line); }
+  #palette button.off { opacity:.3; border-style:dashed; }
 </style>
 </head>
 <body>
@@ -46,9 +49,10 @@
 </header>
 <main>
   <div id="panel">
+    <label>Colors <b id="v_colors">auto</b><input id="colors" type="range" min="0" max="16" value="0"></label>
     <label>Min speckle <b id="v_speckle">4</b><input id="speckle" type="range" min="0" max="64" value="4"></label>
-    <label>Color precision <b id="v_prec">6</b><input id="prec" type="range" min="1" max="8" value="6"></label>
     <label>Corner threshold <b id="v_corner">60</b><input id="corner" type="range" min="0" max="180" value="60"></label>
+    <div id="palette" title="Click a color to remove its layer"></div>
     <div>Wheel: zoom<br>Drag: pan<br>Double click: reset</div>
   </div>
   <div id="views">

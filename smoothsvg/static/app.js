@@ -1,6 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const views = $("views"), layers = [$("inLayer"), $("svgBox")];
 let view = { x: 0, y: 0, k: 1 }, size = null, file = null, svg = "", timer = null, seq = 0;
+const off = new Set(); // palette colors the user turned off
 
 // One shared transform drives both layers, so zoom and pan stay in sync.
 function apply() {
@@ -51,7 +52,8 @@ async function run() {
   const fd = new FormData();
   fd.append("file", file);
   fd.append("filter_speckle", $("speckle").value);
-  fd.append("color_precision", $("prec").value);
+  fd.append("colors", $("colors").value);
+  fd.append("disabled", [...off].join(","));
   fd.append("corner_threshold", $("corner").value);
   try {
     const res = await fetch("/api/convert", { method: "POST", body: fd });
@@ -63,6 +65,14 @@ async function run() {
     const s = data.stats;
     $("stats").textContent = `${s.kb} KB | ${s.paths} paths | ${s.colors} colors | SSIM ${s.ssim} | ${s.ms} ms`;
     $("dl").disabled = $("cp").disabled = false;
+    $("palette").replaceChildren(...data.palette.map(([hex, share]) => {
+      const b = document.createElement("button");
+      b.style.background = hex;
+      b.title = `${hex} (${(share * 100).toFixed(1)}%)`;
+      b.classList.toggle("off", off.has(hex));
+      b.onclick = () => { off.has(hex) ? off.delete(hex) : off.add(hex); run(); };
+      return b;
+    }));
   } catch (e) {
     $("stats").textContent = e.message;
     $("stats").classList.add("err");
@@ -72,6 +82,7 @@ async function run() {
 function setFile(f) {
   if (!f) return;
   file = f;
+  off.clear();
   $("drop").hidden = true;
   const img = $("inImg");
   img.onload = () => {
@@ -86,9 +97,10 @@ $("file").onchange = (e) => setFile(e.target.files[0]);
 window.addEventListener("dragover", (e) => e.preventDefault());
 window.addEventListener("drop", (e) => { e.preventDefault(); setFile(e.dataTransfer.files[0]); });
 
-[["speckle", "v_speckle"], ["prec", "v_prec"], ["corner", "v_corner"]].forEach(([i, v]) =>
+[["speckle", "v_speckle"], ["colors", "v_colors"], ["corner", "v_corner"]].forEach(([i, v]) =>
   $(i).addEventListener("input", () => {
-    $(v).textContent = $(i).value;
+    $(v).textContent = $(i).value === "0" && i === "colors" ? "auto" : $(i).value;
+    if (i === "colors") off.clear(); // palette changes, old picks no longer match
     clearTimeout(timer);
     timer = setTimeout(run, 300);
   }));
