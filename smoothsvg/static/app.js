@@ -72,6 +72,9 @@ async function run() {
   fd.append("corner", $("corner").value);
   fd.append("detail", $("detail").value);
   fd.append("denoise", $("denoise").checked);
+  fd.append("ellipses", $("ellipses").checked);
+  fd.append("polygons", $("polygons").checked);
+  fd.append("shape_tol", $("tol").value);
   try {
     const res = await fetch("/api/convert", { method: "POST", body: fd });
     if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
@@ -90,7 +93,7 @@ async function run() {
     }
     $("usedModel").textContent = "using: " + data.used.model;
     const s = data.stats;
-    $("stats").textContent = `${s.kb} KB | ${s.paths} paths | ${s.colors} colors | SSIM ${s.ssim} | ${s.ms} ms`;
+    $("stats").textContent = `${s.kb} KB | ${s.paths} paths | ${s.colors} colors | ${s.shapes} shapes | SSIM ${s.ssim} | ${s.ms} ms`;
     $("dl").disabled = $("cp").disabled = false;
     $("palette").replaceChildren(...data.palette.map(([hex, share]) => {
       const b = document.createElement("button");
@@ -130,7 +133,7 @@ window.addEventListener("drop", (e) => { e.preventDefault(); setFile(e.dataTrans
 
 const AUTO0 = new Set(["colors", "area", "corner", "detail"]); // 0 means "decide for me"
 [["speckle", "v_speckle"], ["colors", "v_colors"], ["smooth", "v_smooth"], ["area", "v_area"],
-  ["merge", "v_merge"], ["corner", "v_corner"], ["detail", "v_detail"]].forEach(([i, v]) =>
+  ["merge", "v_merge"], ["corner", "v_corner"], ["detail", "v_detail"], ["tol", "v_tol"]].forEach(([i, v]) =>
   $(i).addEventListener("input", () => {
     $(v).textContent = $(i).value === "0" && AUTO0.has(i) ? "auto" : $(i).value;
     if (i === "colors") off.clear(); // palette changes, old picks no longer match
@@ -159,6 +162,8 @@ $("refBtn").onclick = () => {
 };
 $("bg").onchange = run;
 $("denoise").onchange = run;
+$("ellipses").onchange = run;
+$("polygons").onchange = run;
 $("model").onchange = () => { usePreset = true; off.clear(); run(); };
 $("wipeBtn").onclick = () => {
   document.body.classList.toggle("wipe");

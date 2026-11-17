@@ -68,6 +68,9 @@
     <label>Merge similar colors <b id="v_merge">10</b><input id="merge" type="range" min="0" max="40" value="10"></label>
     <label>Corners <b id="v_corner">auto</b><input id="corner" type="range" min="0" max="180" step="5" value="0"></label>
     <label>Curve simplify <b id="v_detail">auto</b><input id="detail" type="range" min="0" max="20" value="0"></label>
+    <label style="flex-direction:row;align-items:center"><input id="ellipses" type="checkbox" checked> Circles &amp; ellipses</label>
+    <label style="flex-direction:row;align-items:center"><input id="polygons" type="checkbox"> Straight-edge polygons</label>
+    <label>Shape tolerance <b id="v_tol">3</b>%<input id="tol" type="range" min="1" max="15" value="3"></label>
     <label style="flex-direction:row;align-items:center"><input id="denoise" type="checkbox" checked> Clean noise</label>
     <label style="flex-direction:row;align-items:center"><input id="bg" type="checkbox"> Remove background</label>
     <div id="palette" title="Click a color to remove its layer"></div>

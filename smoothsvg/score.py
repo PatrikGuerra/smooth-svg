@@ -53,11 +53,12 @@ def score(img: np.ndarray, svg: str, ms: float = 0.0, aligned: bool = False) -> 
     sw, sh = max(1, round(w * f)), max(1, round(h * f))
     ref = flatten(img) if f == 1 else cv2.resize(flatten(img), (sw, sh), interpolation=cv2.INTER_AREA)
     out = render_aligned(svg, ref) if aligned else render(svg, sw, sh)
-    tags = re.findall(r"<path\b[^>]*>", svg)
+    tags = re.findall(r"<(?:path|circle|ellipse|polygon)\b[^>]*>", svg)
     fills = set(re.findall(r'fill="(#[0-9a-fA-F]{3,8})"', svg))
     return {
         "ssim": round(float(structural_similarity(ref, out, channel_axis=2)), 4),
         "paths": len(tags),
+        "shapes": len(re.findall(r"<(?:circle|ellipse|polygon)\b", svg)),
         "colors": len(fills | ({"#000"} if any("fill=" not in p for p in tags) else set())),
         "kb": round(len(svg.encode()) / 1024, 1),
         "ms": round(ms),

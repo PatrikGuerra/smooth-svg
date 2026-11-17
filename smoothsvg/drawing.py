@@ -147,17 +147,91 @@ def trace_stacked(q: np.ndarray, palette_rgb: np.ndarray, **vt) -> str:
         k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * px + 1, 2 * px + 1))
         return cv2.dilate(mask.astype(np.uint8), k) > 0
 
-    near_edge = grow(~solid, vt.pop("inset", 3))  # pixels close to the outside
+    ellipses = vt.pop("ellipses", False)
+    polygons = vt.pop("polygons", False)
+    tol = vt.pop("shape_tol", 0.03)
+    inset = vt.pop("inset", 3)
     keep_collar = vt.pop("collar", 2)  # keep this much of the upper layer around its neighbour
     out = []
     for r, i in enumerate(order):
         mask = rk >= r
         if r < len(order) - 1:
             upper = rk > r
+            # pixels of the upper layers that lie close to the border of this layer
+            near_edge = grow(~mask, inset)
             mask = mask & ~(near_edge & upper & ~grow(rk == r, keep_collar))
+        own = rk == r
+        # Drop pieces made only of upper colors: the layers above already draw them.
+        _, lab = cv2.connectedComponents(mask.astype(np.uint8), connectivity=8)
+        mask = np.isin(lab, np.unique(lab[own & mask])) & (lab > 0)
+        fill = _hex(palette_rgb[i])
+        shapes = []
+        if ellipses or polygons:
+            mask, shapes = detect_shapes(mask, fill, ellipses, polygons, tol)
         svg = vtracer.convert_raw_image_to_svg(
             _mask_png(mask), img_format="png", colormode="binary", mode="spline", **vt)
-        fill = _hex(palette_rgb[i])
+        out.extend(shapes)
         for tag in re.findall(r"<path\b[^>]*>", svg):
             out.append(re.sub(r'fill="[^"]*"', f'fill="{fill}"', tag))
     return "".join(out)
+
+
+def _iou(a: np.ndarray, b: np.ndarray) -> float:
+    union = int((a | b).sum())
+    return int((a & b).sum()) / union if union else 0.0
+
+
+def detect_shapes(mask: np.ndarray, color: str, ellipses: bool, polygons: bool, tol: float,
+                  min_area: int = 60):
+    """Find simple filled blobs in a layer mask that are really circles, ellipses or polygons.
+
+    A blob counts when its outline fits the primitive: the overlap (intersection over union) of
+    the blob and the primitive is at least 1 - tol. Blobs with holes are left alone.
+    Returns (mask without the found blobs, list of SVG elements).
+    """
+    m8 = mask.astype(np.uint8)
+    contours, hier = cv2.findContours(m8, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+    if hier is None:
+        return mask, []
+    rest, found = mask.copy(), []
+    for i, c in enumerate(contours):
+        if hier[0][i][3] != -1 or hier[0][i][2] != -1:  # a hole itself, or has holes
+            continue
+        area = cv2.contourArea(c)
+        if area < min_area or len(c) < 8:
+            continue
+        x, y, w, h = cv2.boundingRect(c)
+        x0, y0 = max(x - 2, 0), max(y - 2, 0)
+        shape = (min(y + h + 2, mask.shape[0]) - y0, min(x + w + 2, mask.shape[1]) - x0)
+        shifted = c - [x0, y0]
+        blob = np.zeros(shape, np.uint8)
+        cv2.drawContours(blob, [shifted], -1, 1, -1)
+        blob = blob.astype(bool)
+        element = None
+        if ellipses:
+            (cx, cy), (dw, dh), ang = cv2.fitEllipse(c)
+            canvas = np.zeros(shape, np.uint8)
+            q = 16  # sub-pixel precision for the test raster
+            cv2.ellipse(canvas, (round((cx - x0) * q), round((cy - y0) * q)),
+                        (round(dw / 2 * q), round(dh / 2 * q)), ang, 0, 360, 1, -1,
+                        shift=4)
+            if _iou(blob, canvas.astype(bool)) >= 1 - tol:
+                rx, ry = dw / 2, dh / 2
+                if abs(rx - ry) <= 0.04 * max(rx, ry):
+                    element = (f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{(rx + ry) / 2:.1f}" '
+                               f'fill="{color}"/>')
+                else:
+                    element = (f'<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="{rx:.1f}" ry="{ry:.1f}" '
+                               f'transform="rotate({ang:.1f} {cx:.1f} {cy:.1f})" fill="{color}"/>')
+        if element is None and polygons:
+            poly = cv2.approxPolyDP(c, max(1.0, 0.004 * cv2.arcLength(c, True)), True)
+            if 3 <= len(poly) <= 8:
+                canvas = np.zeros(shape, np.uint8)
+                cv2.fillPoly(canvas, [poly - [x0, y0]], 1)
+                if _iou(blob, canvas.astype(bool)) >= 1 - tol / 2:  # straight edges are exact
+                    pts = " ".join(f"{p[0][0]},{p[0][1]}" for p in poly)
+                    element = f'<polygon points="{pts}" fill="{color}"/>'
+        if element:
+            found.append(element)
+            rest[y0:y0 + shape[0], x0:x0 + shape[1]] &= ~blob
+    return rest, found

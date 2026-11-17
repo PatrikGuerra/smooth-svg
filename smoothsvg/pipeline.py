@@ -66,13 +66,16 @@ def _quantized(img: np.ndarray, colors: int | None, clean: bool, merge_de: float
 def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smooth: int = 2,
                   min_area: int | None = None, remove_bg: bool = False, merge_de: float = 10.0,
                   corner: int | None = None, detail: int | None = None, clean: bool = True,
-                  tracer: str = "layers", **opts):
+                  tracer: str = "layers", ellipses: bool = True, polygons: bool = False,
+                  shape_tol: float = 3.0, **opts):
     """Smooth, quantize to a flat palette, clean, drop disabled colors, trace, shrink.
 
     Returns (svg, palette). min_area and filter_speckle are in original pixels.
     merge_de: colors closer than this (Lab distance) become one. corner: vtracer corner angle,
     default from smooth. detail: curve simplify, higher = fewer points; default from smooth.
     clean: edge-keeping noise filter before the colors are cut (skipped when smooth is 0).
+    ellipses, polygons: swap blobs that really are circles/ellipses or straight-edged polygons
+    for exact SVG shapes. shape_tol: percent of mismatch allowed (3 means 97% overlap).
     """
     h, w = img.shape[:2]
     q, palette = _quantized(img, colors, bool(smooth) and clean, merge_de)
@@ -101,11 +104,13 @@ def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smoot
     elif tracer == "layers":  # own layering: avoids the lower color peeking out at edges
         vt = {key: opts[key] for key in ("filter_speckle", "corner_threshold", "length_threshold",
                                          "path_precision") if key in opts}
+        vt.update(ellipses=ellipses, polygons=polygons, shape_tol=shape_tol / 100)
         svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{q.shape[1]}" '
                f'height="{q.shape[0]}">{trace_stacked(q, pal_rgb, **vt)}</svg>')
     else:
         svg = trace(q, **opts)
     return shrink(fit_viewbox(svg, w, h, q.shape[1], q.shape[0])), palette
+
 
 def convert_image(img: np.ndarray, model: str = "auto", colors: int | None = None,
                   smooth: int | None = None, **opts):

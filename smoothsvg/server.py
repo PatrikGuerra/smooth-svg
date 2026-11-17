@@ -37,6 +37,9 @@ async def convert(
     corner: int = Form(0),
     detail: int = Form(0),
     denoise: bool = Form(True),
+    ellipses: bool = Form(True),
+    polygons: bool = Form(False),
+    shape_tol: float = Form(3.0),
 ):
     data = await file.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
@@ -47,8 +50,10 @@ async def convert(
         raise HTTPException(400, str(e)) from e
     if model not in MODELS or not 0 <= smooth <= 5:
         raise HTTPException(400, f"model must be one of {MODELS}, smooth 0-5")
-    if not (0 <= merge_de <= 60 and 0 <= corner <= 180 and 0 <= detail <= 20 and min_area >= 0):
-        raise HTTPException(400, "merge_de 0-60, corner 0-180, detail 0-20, min_area >= 0")
+    if not (0 <= merge_de <= 60 and 0 <= corner <= 180 and 0 <= detail <= 20 and min_area >= 0
+            and 0.5 <= shape_tol <= 20):
+        raise HTTPException(
+            400, "merge_de 0-60, corner 0-180, detail 0-20, min_area >= 0, shape_tol 0.5-20")
     t = time.perf_counter()
     svg, palette, used = convert_image(
         img,
@@ -63,6 +68,9 @@ async def convert(
         corner=corner or None,
         detail=detail or None,
         clean=denoise,
+        ellipses=ellipses,
+        polygons=polygons,
+        shape_tol=shape_tol,
     )
     stats = score(img, svg, (time.perf_counter() - t) * 1000)
     return {"svg": svg, "stats": stats, "palette": palette, "used": used}

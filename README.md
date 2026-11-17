@@ -42,6 +42,9 @@ Press `Ctrl+C` in the terminal to stop it.
 | Merge similar colors | Colors closer than this become one. Higher gives fewer colors (10 keeps two greens apart) |
 | Corners | Angle above which a point stays a sharp corner. `auto` follows Smooth |
 | Curve simplify | Higher gives fewer curve points and smaller files. Matters most on big images |
+| Circles & ellipses | Blobs that are really circles or ellipses become exact `<circle>` / `<ellipse>` shapes. On by default |
+| Straight-edge polygons | Blobs with straight edges (3 to 8 corners) become `<polygon>`. Off by default. It can flatten curvy pixel art |
+| Shape tolerance | How far a blob may differ from the shape and still be swapped, in percent of its area. 1 is strict, 15 is loose. Default 3 |
 | Clean noise | Edge-keeping filter before the colors are cut. Turn it off for crisp pixel art |
 | Color dots | Click a dot to remove that color layer |
 | Remove background | Makes the border color transparent |
@@ -117,6 +120,14 @@ reaches the outer edge, the layer under it is pulled back a few pixels, so a thi
 color does not peek out along the edge. The older vtracer color mode had this flaw (a green line
 along the dark spikes of the DinoDino logo). The cost: on noisy JPGs the result is a little rougher
 and the files a little bigger (low-res JPG SSIM 0.866 to 0.818; DinoDino 39 KB to 52 KB).
+
+## Shape detection
+
+After each layer is cut, blobs that fit a circle, ellipse or polygon (overlap of at least 100 minus the
+tolerance, in percent) are written as exact SVG shapes and left out of the traced path. The status bar
+shows how many were found. Only simple blobs without holes are tested, so a circle that is partly
+covered by another shape, or a ring, stays a normal path. Pieces that only repeat what a layer above
+already draws are dropped, which also cut the DinoDino file from 52 KB to 33 KB.
 
 ## Limits
 
