@@ -33,6 +33,10 @@ async def convert(
     smooth: int = Form(2),
     remove_bg: bool = Form(False),
     min_area: int = Form(0),
+    merge_de: float = Form(10.0),
+    corner: int = Form(0),
+    detail: int = Form(0),
+    denoise: bool = Form(True),
 ):
     data = await file.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
@@ -43,6 +47,8 @@ async def convert(
         raise HTTPException(400, str(e)) from e
     if model not in MODELS or not 0 <= smooth <= 5:
         raise HTTPException(400, f"model must be one of {MODELS}, smooth 0-5")
+    if not (0 <= merge_de <= 60 and 0 <= corner <= 180 and 0 <= detail <= 20 and min_area >= 0):
+        raise HTTPException(400, "merge_de 0-60, corner 0-180, detail 0-20, min_area >= 0")
     t = time.perf_counter()
     svg, palette, used = convert_image(
         img,
@@ -53,6 +59,10 @@ async def convert(
         filter_speckle=filter_speckle,
         remove_bg=remove_bg,
         min_area=min_area or None,
+        merge_de=merge_de,
+        corner=corner or None,
+        detail=detail or None,
+        clean=denoise,
     )
     stats = score(img, svg, (time.perf_counter() - t) * 1000)
     return {"svg": svg, "stats": stats, "palette": palette, "used": used}

@@ -52,24 +52,30 @@ def trace(img: np.ndarray, **opts) -> str:
 _QCACHE: dict = {}  # last few quantize results, so slider moves skip the slowest early steps
 
 
-def _quantized(img: np.ndarray, colors: int | None, clean: bool):
-    key = (hashlib.blake2b(img.tobytes(), digest_size=16).digest(), img.shape, colors, clean)
+def _quantized(img: np.ndarray, colors: int | None, clean: bool, merge_de: float):
+    key = (hashlib.blake2b(img.tobytes(), digest_size=16).digest(), img.shape, colors, clean,
+           merge_de)
     if key not in _QCACHE:
         if len(_QCACHE) >= 4:
             _QCACHE.pop(next(iter(_QCACHE)))
-        _QCACHE[key] = quantize(denoise(img) if clean else img, colors)
+        _QCACHE[key] = quantize(denoise(img) if clean else img, colors, merge_de=merge_de)
     q, palette = _QCACHE[key]
     return q.copy(), palette  # callers edit q in place
 
 
 def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smooth: int = 2,
-                  min_area: int | None = None, remove_bg: bool = False, **opts):
+                  min_area: int | None = None, remove_bg: bool = False, merge_de: float = 10.0,
+                  corner: int | None = None, detail: int | None = None, clean: bool = True,
+                  **opts):
     """Smooth, quantize to a flat palette, clean, drop disabled colors, trace, shrink.
 
     Returns (svg, palette). min_area and filter_speckle are in original pixels.
+    merge_de: colors closer than this (Lab distance) become one. corner: vtracer corner angle,
+    default from smooth. detail: curve simplify, higher = fewer points; default from smooth.
+    clean: edge-keeping noise filter before the colors are cut (skipped when smooth is 0).
     """
     h, w = img.shape[:2]
-    q, palette = _quantized(img, colors, bool(smooth))
+    q, palette = _quantized(img, colors, bool(smooth) and clean, merge_de)
     pal_rgb = np.array([[int(hx[i:i + 2], 16) for i in (1, 3, 5)] for hx, _ in palette], np.uint8)
     if min_area is None:
         min_area = max(1, round(0.0001 * h * w))  # 1 keeps every pixel (tiny pixel art)
@@ -82,8 +88,11 @@ def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smoot
         q[(q[..., :3] == [int(hx[i:i + 2], 16) for i in (1, 3, 5)]).all(axis=2), 3] = 0
     # color_precision=8 and layer_difference=0 keep the palette exact (vtracer discussion #83).
     # Coordinates are in upscaled px, so length_threshold grows with k; 1 decimal is enough.
-    opts = {"color_precision": 8, "layer_difference": 0, "corner_threshold": level(smooth)[2],
-            "path_precision": 1, "length_threshold": max(4.0, 3.0 * k), **opts}
+    opts = {
+        "color_precision": 8, "layer_difference": 0,
+        "corner_threshold": corner or level(smooth)[2], "path_precision": 1,
+        "length_threshold": max(4.0, (detail or 3) * float(k)), **opts,
+    }
     opts["filter_speckle"] = opts.get("filter_speckle", 1) * k
     svg = trace(q, **opts)
     return shrink(fit_viewbox(svg, w, h, q.shape[1], q.shape[0])), palette
@@ -106,8 +115,8 @@ def convert_image(img: np.ndarray, model: str = "auto", colors: int | None = Non
         svg, palette = trace_drawing(img, smooth, opts.get("disabled", ()),
                                      opts.get("remove_bg", False))
         return svg, palette, used
-    if "min_area" in pre:
-        opts.setdefault("min_area", pre["min_area"])
+    if opts.get("min_area") is None and "min_area" in pre:
+        opts["min_area"] = pre["min_area"]
     svg, palette = convert_array(img, colors=colors, smooth=smooth, **opts)
     return svg, palette, used
 

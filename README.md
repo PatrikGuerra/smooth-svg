@@ -38,12 +38,17 @@ Press `Ctrl+C` in the terminal to stop it.
 | Colors | Number of colors. `auto` lets the tool decide |
 | Smooth | 0 to 5. Higher means rounder edges and fewer small details |
 | Min speckle | Drops tiny blobs |
+| Min area (px) | Merges color islands smaller than this into their surroundings. `auto` scales with the image |
+| Merge similar colors | Colors closer than this become one. Higher gives fewer colors (10 keeps two greens apart) |
+| Corners | Angle above which a point stays a sharp corner. `auto` follows Smooth |
+| Curve simplify | Higher gives fewer curve points and smaller files. Matters most on big images |
+| Clean noise | Edge-keeping filter before the colors are cut. Turn it off for crisp pixel art |
 | Color dots | Click a dot to remove that color layer |
 | Remove background | Makes the border color transparent |
 | Load reference SVG | Loads an SVG from another tool. "Show: mine / reference" swaps it in |
 | Download / Copy SVG | Saves or copies the result |
 
-The input is drawn with square pixels, so you can see stairs against curves when you zoom in.
+A spinner shows over the preview and in the status bar while the server works. Only the newest\nrequest ends it, so dragging a slider fast does not flicker.\n\nThe `drawing` model uses Potrace and ignores Colors, Merge, Corners, Curve simplify and Min area.\n\nThe input is drawn with square pixels, so you can see stairs against curves when you zoom in.
 The first conversion of an image uses the model's own colors and smoothness and shows them in the
 controls. After that, the controls are yours.
 

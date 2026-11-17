@@ -46,9 +46,16 @@ views.addEventListener("pointermove", (e) => {
 views.addEventListener("pointerup", () => (drag = null));
 views.addEventListener("dblclick", fit);
 
+// Loading state: spinner over the preview and in the status line, until the newest request ends.
+function setLoading(on) {
+  document.body.classList.toggle("loading", on);
+  $("stats").classList.toggle("busy", on);
+}
+
 async function run() {
   if (!file) return;
   const my = ++seq;
+  setLoading(true);
   $("stats").textContent = "Converting...";
   $("stats").classList.remove("err");
   const fd = new FormData();
@@ -60,6 +67,11 @@ async function run() {
   fd.append("model", $("model").value);
   fd.append("preset", usePreset);
   fd.append("remove_bg", $("bg").checked);
+  fd.append("min_area", $("area").value);
+  fd.append("merge_de", $("merge").value);
+  fd.append("corner", $("corner").value);
+  fd.append("detail", $("detail").value);
+  fd.append("denoise", $("denoise").checked);
   try {
     const res = await fetch("/api/convert", { method: "POST", body: fd });
     if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
@@ -89,8 +101,11 @@ async function run() {
       return b;
     }));
   } catch (e) {
+    if (my !== seq) return;
     $("stats").textContent = e.message;
     $("stats").classList.add("err");
+  } finally {
+    if (my === seq) setLoading(false); // only the newest request ends the loading state
   }
 }
 
@@ -113,9 +128,11 @@ $("file").onchange = (e) => setFile(e.target.files[0]);
 window.addEventListener("dragover", (e) => e.preventDefault());
 window.addEventListener("drop", (e) => { e.preventDefault(); setFile(e.dataTransfer.files[0]); });
 
-[["speckle", "v_speckle"], ["colors", "v_colors"], ["smooth", "v_smooth"]].forEach(([i, v]) =>
+const AUTO0 = new Set(["colors", "area", "corner", "detail"]); // 0 means "decide for me"
+[["speckle", "v_speckle"], ["colors", "v_colors"], ["smooth", "v_smooth"], ["area", "v_area"],
+  ["merge", "v_merge"], ["corner", "v_corner"], ["detail", "v_detail"]].forEach(([i, v]) =>
   $(i).addEventListener("input", () => {
-    $(v).textContent = $(i).value === "0" && i === "colors" ? "auto" : $(i).value;
+    $(v).textContent = $(i).value === "0" && AUTO0.has(i) ? "auto" : $(i).value;
     if (i === "colors") off.clear(); // palette changes, old picks no longer match
     clearTimeout(timer);
     timer = setTimeout(run, 300);
@@ -141,6 +158,7 @@ $("refBtn").onclick = () => {
   }
 };
 $("bg").onchange = run;
+$("denoise").onchange = run;
 $("model").onchange = () => { usePreset = true; off.clear(); run(); };
 $("wipeBtn").onclick = () => {
   document.body.classList.toggle("wipe");
