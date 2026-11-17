@@ -23,10 +23,10 @@ def index():
 @app.post("/api/convert")
 async def convert(
     file: UploadFile = File(...),
-    filter_speckle: int = Form(4),
+    filter_speckle: int = Form(1),
     colors: int = Form(0),
     disabled: str = Form(""),
-    corner_threshold: int = Form(60),
+    smooth: int = Form(2),
 ):
     data = await file.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
@@ -41,7 +41,7 @@ async def convert(
         colors=colors or None,
         disabled=set(disabled.split(",")),
         filter_speckle=filter_speckle,
-        corner_threshold=corner_threshold,
+        smooth=smooth,
     )
     stats = score(img, svg, (time.perf_counter() - t) * 1000)
     return {"svg": svg, "stats": stats, "palette": palette}

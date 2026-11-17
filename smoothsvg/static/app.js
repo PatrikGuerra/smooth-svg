@@ -54,7 +54,7 @@ async function run() {
   fd.append("filter_speckle", $("speckle").value);
   fd.append("colors", $("colors").value);
   fd.append("disabled", [...off].join(","));
-  fd.append("corner_threshold", $("corner").value);
+  fd.append("smooth", $("smooth").value);
   try {
     const res = await fetch("/api/convert", { method: "POST", body: fd });
     if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
@@ -97,7 +97,7 @@ $("file").onchange = (e) => setFile(e.target.files[0]);
 window.addEventListener("dragover", (e) => e.preventDefault());
 window.addEventListener("drop", (e) => { e.preventDefault(); setFile(e.dataTransfer.files[0]); });
 
-[["speckle", "v_speckle"], ["colors", "v_colors"], ["corner", "v_corner"]].forEach(([i, v]) =>
+[["speckle", "v_speckle"], ["colors", "v_colors"], ["smooth", "v_smooth"]].forEach(([i, v]) =>
   $(i).addEventListener("input", () => {
     $(v).textContent = $(i).value === "0" && i === "colors" ? "auto" : $(i).value;
     if (i === "colors") off.clear(); // palette changes, old picks no longer match

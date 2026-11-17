@@ -18,12 +18,26 @@ def logo():
 
 
 def pixelart():
-    rng = np.random.default_rng(1)
-    pal = np.array([[0, 0, 0], [255, 255, 255], [200, 30, 30], [40, 90, 200]], np.uint8)
-    small = pal[rng.integers(0, 4, (16, 16))]
-    small[4:12, 4:12] = pal[2]
-    small[6:10, 6:10] = pal[3]
-    Image.fromarray(small).resize((16, 16)).save(OUT / "pixelart_16.png")  # tiny, real pixel art
+    heart = [
+        "..###...###..",
+        ".#####.#####.",
+        "#############",
+        "#############",
+        ".###########.",
+        "..#########..",
+        "...#######...",
+        "....#####....",
+        ".....###.....",
+        "......#......",
+    ]
+    im = Image.new("RGB", (13, 10), "white")
+    for y, row in enumerate(heart):
+        for x, c in enumerate(row):
+            if c == "#":
+                im.putpixel((x, y), (210, 30, 40))
+    for x, y in ((1, 1), (2, 1), (1, 2)):
+        im.putpixel((x, y), (255, 154, 162))
+    im.save(OUT / "pixelart.png")  # tiny, real pixel art
 
 
 def lowres_jpg():

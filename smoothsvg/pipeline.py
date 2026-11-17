@@ -6,6 +6,7 @@ import vtracer
 from PIL import Image, ImageOps
 
 from .quantize import quantize
+from .smooth import denoise, fit_viewbox, level, upscale
 
 ALLOWED = {".png", ".jpg", ".jpeg"}
 MAX_PIXELS = 16_000_000
@@ -44,15 +45,25 @@ def trace(img: np.ndarray, **opts) -> str:
     )
 
 
-def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), **opts):
-    """Quantize to a flat palette, drop disabled colors, trace. Returns (svg, palette)."""
-    q, palette = quantize(img, colors)
+def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smooth: int = 2, **opts):
+    """Smooth, quantize to a flat palette, drop disabled colors, trace.
+
+    Returns (svg, palette). filter_speckle is in original pixels.
+    """
+    h, w = img.shape[:2]
+    q, palette = quantize(denoise(img) if smooth else img, colors)
+    pal_rgb = np.array([[int(hx[i:i + 2], 16) for i in (1, 3, 5)] for hx, _ in palette], np.uint8)
+    q, k = upscale(q, pal_rgb, smooth) if len(pal_rgb) else (q, 1)
     for hx, _ in palette:
         if hx in disabled:
             q[(q[..., :3] == [int(hx[i:i + 2], 16) for i in (1, 3, 5)]).all(axis=2), 3] = 0
-    # color_precision=8 and layer_difference=0 keep the palette exact (vtracer discussion #83)
-    opts = {"color_precision": 8, "layer_difference": 0, **opts}
-    return trace(q, **opts), palette
+    # color_precision=8 and layer_difference=0 keep the palette exact (vtracer discussion #83).
+    # Coordinates are in upscaled px, so length_threshold grows with k; 1 decimal is enough.
+    opts = {"color_precision": 8, "layer_difference": 0, "corner_threshold": level(smooth)[2],
+            "path_precision": 1, "length_threshold": max(4.0, 3.0 * k), **opts}
+    opts["filter_speckle"] = opts.get("filter_speckle", 1) * k
+    svg = trace(q, **opts)
+    return fit_viewbox(svg, w, h, q.shape[1], q.shape[0]), palette
 
 
 def convert(path: str | Path, **opts) -> str:

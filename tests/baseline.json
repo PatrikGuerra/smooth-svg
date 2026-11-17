@@ -27,11 +27,11 @@
   "kb": 0.3,
   "ms": 42
  },
- "pixelart_16.png": {
-  "ssim": 0.19,
-  "paths": 5,
-  "colors": 5,
-  "kb": 2.0,
-  "ms": 1
+ "pixelart.png": {
+  "ssim": 0.756,
+  "paths": 3,
+  "colors": 2,
+  "kb": 0.8,
+  "ms": 5
  }
 }
