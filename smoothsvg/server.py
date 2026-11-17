@@ -6,7 +6,8 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .pipeline import convert_array, load_bytes
+from .pipeline import convert_image, load_bytes
+from .presets import MODELS
 from .score import score
 
 MAX_BYTES = 20 * 1024 * 1024
@@ -24,6 +25,8 @@ def index():
 @app.post("/api/convert")
 async def convert(
     file: UploadFile = File(...),
+    model: str = Form("auto"),
+    preset: bool = Form(True),
     filter_speckle: int = Form(1),
     colors: int = Form(0),
     disabled: str = Form(""),
@@ -38,15 +41,18 @@ async def convert(
         img = load_bytes(data)
     except Exception as e:  # PIL raises many types for bad files
         raise HTTPException(400, str(e)) from e
+    if model not in MODELS or not 0 <= smooth <= 5:
+        raise HTTPException(400, f"model must be one of {MODELS}, smooth 0-5")
     t = time.perf_counter()
-    svg, palette = convert_array(
+    svg, palette, used = convert_image(
         img,
-        colors=colors or None,
+        model,
+        colors=None if preset else colors,
+        smooth=None if preset else smooth,
         disabled=set(re.findall(r"#[0-9A-Fa-f]{6}", disabled)),
         filter_speckle=filter_speckle,
-        smooth=smooth,
         remove_bg=remove_bg,
         min_area=min_area or None,
     )
     stats = score(img, svg, (time.perf_counter() - t) * 1000)
-    return {"svg": svg, "stats": stats, "palette": palette}
+    return {"svg": svg, "stats": stats, "palette": palette, "used": used}

@@ -2,10 +2,13 @@ import io
 import re
 import time
 
+import cv2
 import numpy as np
 import resvg_py
 from PIL import Image
 from skimage.metrics import structural_similarity
+
+SSIM_MAX_PX = 500_000
 
 
 def render(svg: str, w: int, h: int) -> np.ndarray:
@@ -22,7 +25,11 @@ def flatten(img: np.ndarray) -> np.ndarray:
 
 def score(img: np.ndarray, svg: str, ms: float = 0.0) -> dict:
     h, w = img.shape[:2]
-    ref, out = flatten(img), render(svg, w, h)
+    # SSIM on images over 0.5 MP is measured at reduced size, to keep the UI fast
+    f = min(1.0, (SSIM_MAX_PX / (h * w)) ** 0.5)
+    sw, sh = max(1, round(w * f)), max(1, round(h * f))
+    ref = flatten(img) if f == 1 else cv2.resize(flatten(img), (sw, sh), interpolation=cv2.INTER_AREA)
+    out = render(svg, sw, sh)
     tags = re.findall(r"<path\b[^>]*>", svg)
     fills = set(re.findall(r'fill="(#[0-9a-fA-F]{3,8})"', svg))
     return {

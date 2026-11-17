@@ -1,6 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const views = $("views"), layers = [$("inLayer"), $("svgBox")];
 let view = { x: 0, y: 0, k: 1 }, size = null, file = null, svg = "", timer = null, seq = 0;
+let usePreset = true; // first run per image/model: let the model choose colors and smooth
 const off = new Set(); // palette colors the user turned off
 
 // One shared transform drives both layers, so zoom and pan stay in sync.
@@ -55,6 +56,8 @@ async function run() {
   fd.append("colors", $("colors").value);
   fd.append("disabled", [...off].join(","));
   fd.append("smooth", $("smooth").value);
+  fd.append("model", $("model").value);
+  fd.append("preset", usePreset);
   fd.append("remove_bg", $("bg").checked);
   try {
     const res = await fetch("/api/convert", { method: "POST", body: fd });
@@ -63,6 +66,14 @@ async function run() {
     if (my !== seq) return; // a newer run replaced this one
     svg = data.svg;
     $("svgBox").innerHTML = svg;
+    if (usePreset) { // show what the model picked, then hand control to the sliders
+      $("colors").value = data.used.colors || 0;
+      $("smooth").value = data.used.smooth;
+      $("v_colors").textContent = data.used.colors || "auto";
+      $("v_smooth").textContent = data.used.smooth;
+      usePreset = false;
+    }
+    $("usedModel").textContent = "using: " + data.used.model;
     const s = data.stats;
     $("stats").textContent = `${s.kb} KB | ${s.paths} paths | ${s.colors} colors | SSIM ${s.ssim} | ${s.ms} ms`;
     $("dl").disabled = $("cp").disabled = false;
@@ -83,6 +94,7 @@ async function run() {
 function setFile(f) {
   if (!f) return;
   file = f;
+  usePreset = true;
   off.clear();
   $("drop").hidden = true;
   const img = $("inImg");
@@ -107,6 +119,7 @@ window.addEventListener("drop", (e) => { e.preventDefault(); setFile(e.dataTrans
   }));
 
 $("bg").onchange = run;
+$("model").onchange = () => { usePreset = true; off.clear(); run(); };
 $("wipeBtn").onclick = () => {
   document.body.classList.toggle("wipe");
   $("wipe").hidden = !document.body.classList.contains("wipe");

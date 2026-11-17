@@ -12,7 +12,7 @@ LEVELS = {
     4: (4, 3.0, 110),
     5: (4, 4.0, 130),
 }
-MAX_WORK_PX = 16_000_000  # upscaled image cap, keeps memory bounded
+MAX_WORK_PX = 2_500_000  # upscaled image cap: bounds memory and time; big images need less upscale
 
 
 def level(smooth: int) -> tuple[int, float, int]:

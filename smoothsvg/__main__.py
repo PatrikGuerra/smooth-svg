@@ -3,7 +3,8 @@ import json
 import sys
 from pathlib import Path
 
-from .pipeline import ALLOWED, convert_array, load
+from .pipeline import ALLOWED, convert_image, load
+from .presets import MODELS
 from .score import compare_png, timed_score
 
 SAMPLES = Path(__file__).parent.parent / "tests" / "samples"
@@ -27,7 +28,8 @@ def main(argv=None) -> int:
     p.add_argument("input", type=Path, help="image file or folder (or: bench [folder])")
     p.add_argument("-o", "--output", type=Path, help="svg file, or folder for batch")
     p.add_argument("--compare", action="store_true", help="also write <name>.compare.png")
-    p.add_argument("--smooth", type=int, default=2, choices=range(6), help="0 off, 5 most")
+    p.add_argument("--model", default="auto", choices=MODELS)
+    p.add_argument("--smooth", type=int, choices=range(6), help="0 off, 5 most (default: by model)")
     p.add_argument("--colors", type=int, help="number of colors (default: auto)")
     p.add_argument("--min-area", type=int, help="drop color islands under N pixels")
     p.add_argument("--remove-bg", action="store_true", help="make the background transparent")
@@ -43,10 +45,10 @@ def main(argv=None) -> int:
 
     for src, dst in pairs:
         img = load(src)
-        svg = convert_array(img, colors=a.colors, smooth=a.smooth, min_area=a.min_area,
-                            remove_bg=a.remove_bg)[0]
+        svg, _, used = convert_image(img, a.model, colors=a.colors, smooth=a.smooth,
+                                     min_area=a.min_area, remove_bg=a.remove_bg)
         dst.write_text(svg, encoding="utf-8")
-        print(f"{src.name} -> {dst} ({dst.stat().st_size / 1024:.1f} KB)")
+        print(f"{src.name} [{used['model']}] -> {dst} ({dst.stat().st_size / 1024:.1f} KB)")
         if a.compare:
             compare_png(img, svg, dst.with_suffix(".compare.png"))
     return 0
@@ -58,7 +60,7 @@ def bench(folder: Path) -> int:
     base = json.loads(base_file.read_text()) if base_file.exists() else {}
     rows, cur = [], {}
     for f in sorted(f for f in folder.iterdir() if f.suffix.lower() in ALLOWED):
-        _, s = timed_score(load(f), lambda i: convert_array(i)[0])
+        _, s = timed_score(load(f), lambda i: convert_image(i)[0])
         cur[f.name] = s
         b = base.get(f.name)
         rows.append((f.name, s, f"{s['kb'] - b['kb']:+.1f} KB, {s['ssim'] - b['ssim']:+.3f} ssim"

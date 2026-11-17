@@ -1,3 +1,4 @@
+import hashlib
 import io
 from pathlib import Path
 
@@ -5,6 +6,9 @@ import numpy as np
 import vtracer
 from PIL import Image, ImageOps
 
+from .classify import classify
+from .drawing import trace_drawing
+from .presets import MODELS, PRESETS
 from .quantize import quantize
 from .smooth import border_color, denoise, fit_viewbox, level, remove_islands, shrink, upscale
 
@@ -45,6 +49,19 @@ def trace(img: np.ndarray, **opts) -> str:
     )
 
 
+_QCACHE: dict = {}  # last few quantize results, so slider moves skip the slowest early steps
+
+
+def _quantized(img: np.ndarray, colors: int | None, clean: bool):
+    key = (hashlib.blake2b(img.tobytes(), digest_size=16).digest(), img.shape, colors, clean)
+    if key not in _QCACHE:
+        if len(_QCACHE) >= 4:
+            _QCACHE.pop(next(iter(_QCACHE)))
+        _QCACHE[key] = quantize(denoise(img) if clean else img, colors)
+    q, palette = _QCACHE[key]
+    return q.copy(), palette  # callers edit q in place
+
+
 def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smooth: int = 2,
                   min_area: int | None = None, remove_bg: bool = False, **opts):
     """Smooth, quantize to a flat palette, clean, drop disabled colors, trace, shrink.
@@ -52,7 +69,7 @@ def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smoot
     Returns (svg, palette). min_area and filter_speckle are in original pixels.
     """
     h, w = img.shape[:2]
-    q, palette = quantize(denoise(img) if smooth else img, colors)
+    q, palette = _quantized(img, colors, bool(smooth))
     pal_rgb = np.array([[int(hx[i:i + 2], 16) for i in (1, 3, 5)] for hx, _ in palette], np.uint8)
     if min_area is None:
         min_area = max(1, round(0.0005 * h * w))  # 1 keeps every pixel (tiny pixel art)
@@ -71,5 +88,29 @@ def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smoot
     svg = trace(q, **opts)
     return shrink(fit_viewbox(svg, w, h, q.shape[1], q.shape[0])), palette
 
+def convert_image(img: np.ndarray, model: str = "auto", colors: int | None = None,
+                  smooth: int | None = None, **opts):
+    """Pick a model (or use the given one), apply its preset, trace.
+
+    Explicit colors/smooth/min_area win over the preset. Returns (svg, palette, used) where
+    used = {"model", "smooth", "colors"}, so a UI can show what was chosen.
+    """
+    if model not in MODELS:
+        raise ValueError(f"model must be one of {MODELS}, got {model!r}")
+    model = classify(img) if model == "auto" else model
+    pre = PRESETS[model]
+    smooth = pre["smooth"] if smooth is None else smooth
+    colors = pre["colors"] if colors is None else colors
+    used = {"model": model, "smooth": smooth, "colors": colors}
+    if pre["tracer"] == "potrace":
+        svg, palette = trace_drawing(img, smooth, opts.get("disabled", ()),
+                                     opts.get("remove_bg", False))
+        return svg, palette, used
+    if "min_area" in pre:
+        opts.setdefault("min_area", pre["min_area"])
+    svg, palette = convert_array(img, colors=colors, smooth=smooth, **opts)
+    return svg, palette, used
+
+
 def convert(path: str | Path, **opts) -> str:
-    return convert_array(load(path), **opts)[0]
+    return convert_image(load(path), **opts)[0]
