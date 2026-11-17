@@ -58,7 +58,7 @@ def _vs_reference(img, mine: dict, ref_file: Path) -> str:
     """Compare with a saved vectorizer.io SVG. Goal: ssim within 0.02 and KB not bigger."""
     if not ref_file.exists():
         return "no reference file"
-    r = score(img, ref_file.read_text(encoding="utf-8"))
+    r = score(img, ref_file.read_text(encoding="utf-8"), aligned=True)
     ok = mine["ssim"] >= r["ssim"] - 0.02 and mine["kb"] <= r["kb"]
     return (f"theirs ssim {r['ssim']}, {r['paths']} paths, {r['kb']} KB -> "
             f"{'GOAL MET' if ok else 'goal missed'}")

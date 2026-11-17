@@ -23,7 +23,7 @@ def _auto_centers(sample: np.ndarray, max_n: int) -> np.ndarray:
     return prev[1]
 
 
-def quantize(img: np.ndarray, n: int | None = None, max_n: int = 16, merge_de: float = 16.0):
+def quantize(img: np.ndarray, n: int | None = None, max_n: int = 16, merge_de: float = 10.0):
     """Cut an RGBA image to a few flat colors (k-means in Lab).
 
     n=None picks the count automatically. Returns (RGBA image, [(hex, share), ...]).

@@ -72,7 +72,7 @@ def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smoot
     q, palette = _quantized(img, colors, bool(smooth))
     pal_rgb = np.array([[int(hx[i:i + 2], 16) for i in (1, 3, 5)] for hx, _ in palette], np.uint8)
     if min_area is None:
-        min_area = max(1, round(0.0005 * h * w))  # 1 keeps every pixel (tiny pixel art)
+        min_area = max(1, round(0.0001 * h * w))  # 1 keeps every pixel (tiny pixel art)
     q = remove_islands(q, pal_rgb, min_area)
     disabled = set(disabled)
     if remove_bg and (bg := border_color(q, palette)):

@@ -23,13 +23,36 @@ def flatten(img: np.ndarray) -> np.ndarray:
     return (img[..., :3] * a + 255 * (1 - a)).astype(np.uint8)
 
 
-def score(img: np.ndarray, svg: str, ms: float = 0.0) -> dict:
+def _bbox(rgb: np.ndarray, tol: int = 12):
+    """Box around everything that is not (near) white, as x0, y0, x1, y1."""
+    ys, xs = np.nonzero((255 - rgb.astype(int)).max(axis=2) > tol)
+    return xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
+
+
+def render_aligned(svg: str, ref: np.ndarray) -> np.ndarray:
+    """Render an SVG that was cropped to its content, and put it where the content of ref is.
+
+    Other tools (vectorizer.io) crop the SVG to the drawing, so a plain render would not line up.
+    """
+    h, w = ref.shape[:2]
+    x0, y0, x1, y1 = _bbox(ref)
+    bw, bh = x1 - x0, y1 - y0
+    big = resvg_py.svg_to_bytes(svg_string=svg, width=bw * 2, background="#ffffff")
+    big = np.asarray(Image.open(io.BytesIO(bytes(big))).convert("RGB"))
+    a, b, c, d = _bbox(big)
+    crop = cv2.resize(big[b:d, a:c], (bw, bh), interpolation=cv2.INTER_AREA)
+    out = np.full((h, w, 3), 255, np.uint8)
+    out[y0:y1, x0:x1] = crop
+    return out
+
+
+def score(img: np.ndarray, svg: str, ms: float = 0.0, aligned: bool = False) -> dict:
     h, w = img.shape[:2]
     # SSIM on images over 0.5 MP is measured at reduced size, to keep the UI fast
     f = min(1.0, (SSIM_MAX_PX / (h * w)) ** 0.5)
     sw, sh = max(1, round(w * f)), max(1, round(h * f))
     ref = flatten(img) if f == 1 else cv2.resize(flatten(img), (sw, sh), interpolation=cv2.INTER_AREA)
-    out = render(svg, sw, sh)
+    out = render_aligned(svg, ref) if aligned else render(svg, sw, sh)
     tags = re.findall(r"<path\b[^>]*>", svg)
     fills = set(re.findall(r'fill="(#[0-9a-fA-F]{3,8})"', svg))
     return {
