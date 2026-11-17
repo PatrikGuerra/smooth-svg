@@ -4,7 +4,24 @@ Turn a PNG or JPG into a **simple** SVG: few colors, few paths, smooth curves
 instead of pixel stairs. The target look is the vectorizer.io result in
 [this example](https://www.vectorizer.io/images/3cuNlHQuZ5DCfp/canvas-2552x664.html).
 
-Status: plan only. No code yet.
+Status: P0 to P8 are built and committed. P9 is partly done: `README.md` exists (how to run the
+tool and the UI), the automated tests are not written yet. How to run it: see `README.md`.
+
+| Phase | State | Note |
+|---|---|---|
+| P0 Setup | done | 6 samples, incl. `dinodino.png` and its vectorizer.io SVG in `tests/samples/ref/` |
+| P1 Baseline | done | `tests/baseline.json` holds plain vtracer numbers |
+| P2 Score | done | `bench`, SSIM, `--compare` |
+| P3 UI | done | zoom, wipe, settings. Tested through the API, not by eye |
+| P4 Colors | done | k-means in Lab, auto count, color dots. Merge threshold is 10 |
+| P5 Smooth | done | per-color mask upscale + blur. Real-ESRGAN was not added (optional) |
+| P6 Clean up | done | island removal, scour, remove background |
+| P7 Presets | done | auto model, Potrace for drawings. Slider update is about 1 s per 1 MP, not under 1 s |
+| P8 Compare | done | DinoDino: SSIM 0.971 vs 0.932, 39 KB vs 78 KB. Goal met |
+| P9 Tests and docs | partly | README done. `tests/test_*.py` still to write |
+
+Changes from the plan: zoom is a short custom script, not panzoom. The reference SVG is drawn
+through `<img>`. `bench` aligns a cropped reference SVG to the input before scoring.
 
 ## 1. What "smart" and "simple" mean here
 
