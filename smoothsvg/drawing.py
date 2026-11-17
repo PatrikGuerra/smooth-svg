@@ -116,65 +116,84 @@ def _mask_png(mask: np.ndarray) -> bytes:
     return buf.getvalue()
 
 
-def trace_stacked(q: np.ndarray, palette_rgb: np.ndarray, **vt) -> str:
-    """Trace each color as its own stacked layer with vtracer, and own the layering here.
+def _grow(mask: np.ndarray, px: int) -> np.ndarray:
+    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * px + 1, 2 * px + 1))
+    return cv2.dilate(mask.astype(np.uint8), k) > 0
 
-    Layer r covers every pixel with color rank >= r, so upper layers sit on top and nothing shows
-    between touching colors. Any order draws the right picture; colors are sorted by their area
-    with holes filled, so a ring (like a halo) goes under the shape it surrounds and stays smooth. Where an upper layer reaches the outer
-    edge of the drawing, the lower layer is pulled back a few pixels under it. Without that, the
-    two outlines are fitted separately and a thin line of the lower color peeks out.
-    Returns the <path> elements, in the pixel space of q.
+
+def trace_stacked(q: np.ndarray, palette_rgb: np.ndarray, **vt) -> str:
+    """Trace every connected piece of color as its own shape, stacked big to small.
+
+    Pieces are sorted by their area with holes filled, so a ring comes before what sits inside it.
+    A piece is drawn with its holes filled, because what fills them is drawn later, on top. This
+    gives plain blobs (a disc with a chart inside is just a disc), and circles and ellipses can
+    be recognized. Holes that show the outside (a letter "o") stay open.
+    Each shape also reaches 2 px under the later pieces it touches, so no gap shows between
+    them. Near the shape's own border that overlap is pulled back, otherwise the two outlines,
+    fitted separately, leave a thin line of the lower color along the edge.
+    Returns the SVG elements, in the pixel space of q.
     """
     import vtracer
-
-    rgb = q[..., :3]
-    solid = q[..., 3] >= 128
-    idx = np.full(q.shape[:2], -1, np.int32)
-    counts = []
-    for i, c in enumerate(palette_rgb):
-        m = (rgb == c).all(axis=2) & solid
-        idx[m] = i
-        counts.append(int(m.sum()))
-    filled = [_filled_area(idx == i) if counts[i] else 0 for i in range(len(palette_rgb))]
-    order = [int(i) for i in np.argsort(filled, kind="stable")[::-1] if counts[i] > 0]
-    rank = np.zeros(len(palette_rgb), np.int32)
-    for r, i in enumerate(order):
-        rank[i] = r
-    rk = np.where(idx >= 0, rank[idx.clip(0)], -1)
-
-    def grow(mask, px):
-        k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * px + 1, 2 * px + 1))
-        return cv2.dilate(mask.astype(np.uint8), k) > 0
 
     ellipses = vt.pop("ellipses", False)
     polygons = vt.pop("polygons", False)
     tol = vt.pop("shape_tol", 0.03)
-    inset = vt.pop("inset", 3)
-    keep_collar = vt.pop("collar", 2)  # keep this much of the upper layer around its neighbour
-    out = []
-    for r, i in enumerate(order):
-        mask = rk >= r
-        if r < len(order) - 1:
-            upper = rk > r
-            # pixels of the upper layers that lie close to the border of this layer
-            near_edge = grow(~mask, inset)
-            mask = mask & ~(near_edge & upper & ~grow(rk == r, keep_collar))
-        own = rk == r
-        # Drop pieces made only of upper colors: the layers above already draw them.
-        _, lab = cv2.connectedComponents(mask.astype(np.uint8), connectivity=8)
-        mask = np.isin(lab, np.unique(lab[own & mask])) & (lab > 0)
-        fill = _hex(palette_rgb[i])
-        shapes = []
-        if ellipses or polygons:
-            mask, shapes = detect_shapes(mask, fill, ellipses, polygons, tol)
-        svg = vtracer.convert_raw_image_to_svg(
-            _mask_png(mask), img_format="png", colormode="binary", mode="spline", **vt)
-        out.extend(shapes)
-        for tag in re.findall(r"<path\b[^>]*>", svg):
-            out.append(re.sub(r'fill="[^"]*"', f'fill="{fill}"', tag))
-    return "".join(out)
+    inset, collar, bleed = vt.pop("inset", 3), vt.pop("collar", 2), vt.pop("bleed", 2)
+    H, W = q.shape[:2]
+    rgb, solid = q[..., :3], q[..., 3] >= 128
 
+    ids = np.zeros((H, W), np.int32)  # connected piece number, 0 = none
+    color_of, box_of = [-1], [(0, 0, 0, 0)]
+    for i, c in enumerate(palette_rgb):
+        m = ((rgb == c).all(axis=2) & solid).astype(np.uint8)
+        if not m.any():
+            continue
+        n, lab, stats, _ = cv2.connectedComponentsWithStats(m, connectivity=8)
+        ids[lab > 0] = lab[lab > 0] + len(color_of) - 1
+        color_of += [i] * (n - 1)
+        box_of += [tuple(int(v) for v in s[:4]) for s in stats[1:]]
+    count = len(color_of)
+    filled = np.zeros(count, np.int64)
+    for cid in range(1, count):
+        x, y, w, h = box_of[cid]
+        filled[cid] = _filled_area(ids[y:y + h, x:x + w] == cid)
+    order = np.argsort(-filled[1:], kind="stable") + 1  # bottom piece first
+    rank = np.full(count, -1, np.int32)
+    rank[order] = np.arange(len(order))
+    rk = rank[ids]  # per pixel: its piece's place in the stack, -1 outside
+
+    out = []
+    pad = inset + bleed + 3
+    for r, cid in enumerate(order):
+        x, y, w, h = box_of[cid]
+        x0, y0, x1, y1 = max(x - pad, 0), max(y - pad, 0), min(x + w + pad, W), min(y + h + pad, H)
+        rc = rk[y0:y1, x0:x1]
+        own, later = rc == r, rc > r
+        cs, _ = cv2.findContours(own.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        inside = np.zeros(own.shape, np.uint8)
+        cv2.drawContours(inside, cs, -1, 1, -1)
+        shape = own | (inside.astype(bool) & later) | (_grow(own, bleed) & later)
+        if later.any():
+            near_border = _grow(~shape, inset)
+            shape &= ~(near_border & later & ~_grow(own, collar))
+        fill = _hex(palette_rgb[color_of[cid]])
+        found = []
+        if ellipses or polygons:
+            shape, found = detect_shapes(shape, fill, ellipses, polygons, tol, ox=x0, oy=y0)
+        out.extend(found)
+        if not shape.any():
+            continue
+        framed = np.pad(shape, 2)  # a margin, so outlines at the crop edge close properly
+        svg = vtracer.convert_raw_image_to_svg(
+            _mask_png(framed), img_format="png", colormode="binary", mode="spline", **vt)
+        for tag in re.findall(r"<path\b[^>]*>", svg):
+            tag = re.sub(r'fill="[^"]*"', f'fill="{fill}"', tag)
+            tag = re.sub(
+                r'translate\(([-\d.]+),([-\d.]+)\)',
+                lambda m, a=x0 - 2, b=y0 - 2: f"translate({float(m[1]) + a:g},{float(m[2]) + b:g})",
+                tag)
+            out.append(tag)
+    return "".join(out)
 
 def _iou(a: np.ndarray, b: np.ndarray) -> float:
     union = int((a | b).sum())
@@ -182,12 +201,12 @@ def _iou(a: np.ndarray, b: np.ndarray) -> float:
 
 
 def detect_shapes(mask: np.ndarray, color: str, ellipses: bool, polygons: bool, tol: float,
-                  min_area: int = 60):
+                  min_area: int = 60, ox: int = 0, oy: int = 0):
     """Find simple filled blobs in a layer mask that are really circles, ellipses or polygons.
 
     A blob counts when its outline fits the primitive: the overlap (intersection over union) of
     the blob and the primitive is at least 1 - tol. Blobs with holes are left alone.
-    Returns (mask without the found blobs, list of SVG elements).
+    Returns (mask without the found blobs, list of SVG elements). ox, oy move the shapes: they\n    are the position of the mask inside the full image.
     """
     m8 = mask.astype(np.uint8)
     contours, hier = cv2.findContours(m8, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
@@ -218,18 +237,19 @@ def detect_shapes(mask: np.ndarray, color: str, ellipses: bool, polygons: bool, 
             if _iou(blob, canvas.astype(bool)) >= 1 - tol:
                 rx, ry = dw / 2, dh / 2
                 if abs(rx - ry) <= 0.04 * max(rx, ry):
-                    element = (f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{(rx + ry) / 2:.1f}" '
+                    element = (f'<circle cx="{cx + ox:.1f}" cy="{cy + oy:.1f}" r="{(rx + ry) / 2:.1f}" '
                                f'fill="{color}"/>')
                 else:
-                    element = (f'<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="{rx:.1f}" ry="{ry:.1f}" '
-                               f'transform="rotate({ang:.1f} {cx:.1f} {cy:.1f})" fill="{color}"/>')
+                    element = (f'<ellipse cx="{cx + ox:.1f}" cy="{cy + oy:.1f}" rx="{rx:.1f}" ry="{ry:.1f}" '
+                               f'transform="rotate({ang:.1f} {cx + ox:.1f} {cy + oy:.1f})" '
+                               f'fill="{color}"/>')
         if element is None and polygons:
             poly = cv2.approxPolyDP(c, max(1.0, 0.004 * cv2.arcLength(c, True)), True)
             if 3 <= len(poly) <= 8:
                 canvas = np.zeros(shape, np.uint8)
                 cv2.fillPoly(canvas, [poly - [x0, y0]], 1)
                 if _iou(blob, canvas.astype(bool)) >= 1 - tol / 2:  # straight edges are exact
-                    pts = " ".join(f"{p[0][0]},{p[0][1]}" for p in poly)
+                    pts = " ".join(f"{p[0][0] + ox},{p[0][1] + oy}" for p in poly)
                     element = f'<polygon points="{pts}" fill="{color}"/>'
         if element:
             found.append(element)

@@ -123,11 +123,13 @@ and the files a little bigger (low-res JPG SSIM 0.866 to 0.818; DinoDino 39 KB t
 
 ## Shape detection
 
-After each layer is cut, blobs that fit a circle, ellipse or polygon (overlap of at least 100 minus the
-tolerance, in percent) are written as exact SVG shapes and left out of the traced path. The status bar
-shows how many were found. Only simple blobs without holes are tested, so a circle that is partly
-covered by another shape, or a ring, stays a normal path. Pieces that only repeat what a layer above
-already draws are dropped, which also cut the DinoDino file from 52 KB to 33 KB.
+Every connected piece of color is its own shape, stacked from the biggest to the smallest. A piece
+is drawn with its holes filled, because what fills them is drawn later, on top. So a disc with a chart
+inside it is just a disc, and a ring around something is a full disc under it. Pieces that fit a circle,
+ellipse or polygon (overlap of at least 100 minus the tolerance, in percent) are written as exact SVG
+shapes. The status bar shows how many were found. In the DinoDino logo the lens disc is now an exact
+ellipse. A shape that is partly covered by another one (the circle in the simple logo) can not be
+recognized, because its visible outline is not a circle.
 
 ## Limits
 
