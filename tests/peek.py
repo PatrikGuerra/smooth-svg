@@ -36,5 +36,5 @@ for tracer in ("vtracer", "layers"):
     wrong = (np.abs(out - truth).sum(axis=2) > 90) & ~band & solid
     print(f"{tracer:8} wrong pixels away from color boundaries: {int(wrong.sum())}")
     n, _, st, ce = cv2.connectedComponentsWithStats(wrong.astype(np.uint8), connectivity=8)
-    big = sorted(((int(st[j, 4]), tuple(int(v) for v in ce[j] / S)) for j in range(1, n)))[-6:]
+    big = sorted((int(st[j, 4]), tuple(int(v) for v in ce[j] / S)) for j in range(1, n))[-6:]
     print("   biggest clusters (pixels, x/y in input):", big)
