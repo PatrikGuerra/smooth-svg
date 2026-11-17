@@ -62,3 +62,34 @@ def trace_drawing(img: np.ndarray, smooth: int = 3, disabled=(), remove_bg: bool
            f'viewBox="0 0 {w * k} {h * k}">{body}</svg>')
     share = float(ink_small.mean())
     return shrink(svg), [(ink_c, round(share, 4)), (bg_c, round(1 - share, 4))]
+
+
+def trace_layers(q: np.ndarray, palette_rgb: np.ndarray, alphamax: float = 1.0,
+                 opttolerance: float = 0.4, turdsize: int = 2) -> str:
+    """Trace a flat-color RGBA image with Potrace, one stacked layer per color.
+
+    Colors are sorted by area. Layer r covers every pixel whose color has rank >= r, so a
+    later layer paints over the earlier ones and no gaps show between touching colors.
+    Returns the <path> elements, in the pixel space of q.
+    """
+    rgb = q[..., :3]
+    solid = q[..., 3] >= 128
+    idx = np.full(q.shape[:2], -1, np.int32)
+    counts = []
+    for i, c in enumerate(palette_rgb):
+        m = (rgb == c).all(axis=2) & solid
+        idx[m] = i
+        counts.append(int(m.sum()))
+    order = [int(i) for i in np.argsort(counts)[::-1] if counts[i] > 0]
+    rank = np.zeros(len(palette_rgb), np.int32)
+    for r, i in enumerate(order):
+        rank[i] = r
+    rk = np.where(idx >= 0, rank[idx.clip(0)], -1)
+    out = []
+    for r, i in enumerate(order):
+        plist = potrace.Bitmap(~(rk >= r)).trace(
+            turdsize=turdsize, alphamax=alphamax, opttolerance=opttolerance)
+        d = _d(plist)
+        if d:
+            out.append(f'<path fill="{_hex(palette_rgb[i])}" fill-rule="evenodd" d="{d}"/>')
+    return "".join(out)

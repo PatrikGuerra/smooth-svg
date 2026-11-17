@@ -7,7 +7,7 @@ import vtracer
 from PIL import Image, ImageOps
 
 from .classify import classify
-from .drawing import trace_drawing
+from .drawing import trace_drawing, trace_layers
 from .presets import MODELS, PRESETS
 from .quantize import quantize
 from .smooth import border_color, denoise, fit_viewbox, level, remove_islands, shrink, upscale
@@ -66,7 +66,7 @@ def _quantized(img: np.ndarray, colors: int | None, clean: bool, merge_de: float
 def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smooth: int = 2,
                   min_area: int | None = None, remove_bg: bool = False, merge_de: float = 10.0,
                   corner: int | None = None, detail: int | None = None, clean: bool = True,
-                  **opts):
+                  tracer: str = "vtracer", **opts):
     """Smooth, quantize to a flat palette, clean, drop disabled colors, trace, shrink.
 
     Returns (svg, palette). min_area and filter_speckle are in original pixels.
@@ -94,7 +94,12 @@ def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smoot
         "length_threshold": max(4.0, (detail or 3) * float(k)), **opts,
     }
     opts["filter_speckle"] = opts.get("filter_speckle", 1) * k
-    svg = trace(q, **opts)
+    if tracer == "potrace":  # experimental: Potrace curves, one stacked layer per color
+        body = trace_layers(q, pal_rgb, alphamax=opts.get("alphamax", 1.0))
+        svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{q.shape[1]}" '
+               f'height="{q.shape[0]}">{body}</svg>')
+    else:
+        svg = trace(q, **opts)
     return shrink(fit_viewbox(svg, w, h, q.shape[1], q.shape[0])), palette
 
 def convert_image(img: np.ndarray, model: str = "auto", colors: int | None = None,
