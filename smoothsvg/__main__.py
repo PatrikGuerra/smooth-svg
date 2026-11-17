@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .pipeline import ALLOWED, convert_image, load
 from .presets import MODELS
-from .score import compare_png, timed_score
+from .score import compare_png, score, timed_score
 
 SAMPLES = Path(__file__).parent.parent / "tests" / "samples"
 
@@ -54,20 +54,33 @@ def main(argv=None) -> int:
     return 0
 
 
+def _vs_reference(img, mine: dict, ref_file: Path) -> str:
+    """Compare with a saved vectorizer.io SVG. Goal: ssim within 0.02 and KB not bigger."""
+    if not ref_file.exists():
+        return "no reference file"
+    r = score(img, ref_file.read_text(encoding="utf-8"))
+    ok = mine["ssim"] >= r["ssim"] - 0.02 and mine["kb"] <= r["kb"]
+    return (f"theirs ssim {r['ssim']}, {r['paths']} paths, {r['kb']} KB -> "
+            f"{'GOAL MET' if ok else 'goal missed'}")
+
+
 def bench(folder: Path) -> int:
     """Convert every sample, print a table, and flag changes vs baseline.json."""
     base_file = folder.parent / "baseline.json"
     base = json.loads(base_file.read_text()) if base_file.exists() else {}
     rows, cur = [], {}
     for f in sorted(f for f in folder.iterdir() if f.suffix.lower() in ALLOWED):
-        _, s = timed_score(load(f), lambda i: convert_image(i)[0])
+        img = load(f)
+        _, s = timed_score(img, lambda i: convert_image(i)[0])
         cur[f.name] = s
         b = base.get(f.name)
-        rows.append((f.name, s, f"{s['kb'] - b['kb']:+.1f} KB, {s['ssim'] - b['ssim']:+.3f} ssim"
-                     if b else "(no baseline)"))
-    print(f"{'sample':<18}{'ssim':>7}{'paths':>7}{'colors':>7}{'KB':>8}{'ms':>7}  vs baseline")
-    for n, s, d in rows:
-        print(f"{n:<18}{s['ssim']:>7}{s['paths']:>7}{s['colors']:>7}{s['kb']:>8}{s['ms']:>7}  {d}")
+        d = f"{s['kb'] - b['kb']:+.1f} KB, {s['ssim'] - b['ssim']:+.3f} ssim" if b else "-"
+        rows.append((f.name, s, d, _vs_reference(img, s, folder / "ref" / f"{f.stem}.svg")))
+    print(f"{'sample':<18}{'ssim':>7}{'paths':>7}{'colors':>7}{'KB':>8}{'ms':>7}  "
+          f"{'vs baseline':<22}vs vectorizer.io (ref/<name>.svg)")
+    for n, s, d, r in rows:
+        print(f"{n:<18}{s['ssim']:>7}{s['paths']:>7}{s['colors']:>7}{s['kb']:>8}{s['ms']:>7}  "
+              f"{d:<22}{r}")
     if not base:
         base_file.write_text(json.dumps(cur, indent=1))
         print(f"saved {base_file}")

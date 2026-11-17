@@ -25,7 +25,7 @@
   .pane .tag { position:absolute; top:6px; left:8px; z-index:3; font-size:12px; opacity:.7; pointer-events:none; }
   .layer { position:absolute; left:0; top:0; transform-origin:0 0; }
   #inImg { image-rendering:pixelated; display:block; }
-  #svgBox svg { display:block; }
+  #svgBox svg, #svgBox img { display:block; }
   body.wipe #views { display:block; }
   body.wipe .pane { position:absolute; inset:0; border:0; }
   body.wipe #outPane { clip-path: inset(0 0 0 var(--wipe,50%)); }
@@ -45,6 +45,8 @@
 <header>
   <h1>smooth-svg</h1>
   <label class="btn">Open image<input id="file" type="file" accept="image/png,image/jpeg" hidden></label>
+  <label class="btn" title="An SVG from another tool, to compare against">Load reference SVG<input id="ref" type="file" accept=".svg,image/svg+xml" hidden></label>
+  <button id="refBtn" disabled>Show: mine</button>
   <button id="wipeBtn">Wipe mode</button>
   <button id="themeBtn">Theme</button>
 </header>

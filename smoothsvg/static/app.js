@@ -1,6 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const views = $("views"), layers = [$("inLayer"), $("svgBox")];
 let view = { x: 0, y: 0, k: 1 }, size = null, file = null, svg = "", timer = null, seq = 0;
+let refUrl = null, showRef = false;
 let usePreset = true; // first run per image/model: let the model choose colors and smooth
 const off = new Set(); // palette colors the user turned off
 
@@ -66,6 +67,8 @@ async function run() {
     if (my !== seq) return; // a newer run replaced this one
     svg = data.svg;
     $("svgBox").innerHTML = svg;
+    showRef = false;
+    $("refBtn").textContent = "Show: mine";
     if (usePreset) { // show what the model picked, then hand control to the sliders
       $("colors").value = data.used.colors || 0;
       $("smooth").value = data.used.smooth;
@@ -118,6 +121,25 @@ window.addEventListener("drop", (e) => { e.preventDefault(); setFile(e.dataTrans
     timer = setTimeout(run, 300);
   }));
 
+// Reference SVG is drawn through <img>, so any script inside it cannot run.
+$("ref").onchange = (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  if (refUrl) URL.revokeObjectURL(refUrl);
+  refUrl = URL.createObjectURL(f.slice(0, f.size, "image/svg+xml"));
+  $("refBtn").disabled = false;
+  $("refBtn").click();
+};
+$("refBtn").onclick = () => {
+  if (!refUrl || !svg) return;
+  showRef = !showRef;
+  $("refBtn").textContent = showRef ? "Show: reference" : "Show: mine";
+  if (showRef) {
+    $("svgBox").innerHTML = `<img src="${refUrl}" width="${size.w}" height="${size.h}" alt="">`;
+  } else {
+    $("svgBox").innerHTML = svg;
+  }
+};
 $("bg").onchange = run;
 $("model").onchange = () => { usePreset = true; off.clear(); run(); };
 $("wipeBtn").onclick = () => {
