@@ -60,43 +60,54 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m smoothsvg --ui
 ```
 
-Your browser opens at <http://127.0.0.1:8765>. The server listens on this computer only. Open an
-image or drop a PNG/JPG on the page (up to 20 MB). The input is on the left, drawn with square
-pixels. The SVG is on the right and stays sharp at any zoom. Both sides move together.
+Your browser opens at <http://127.0.0.1:8765>. The server listens on this computer only. Drop a
+PNG/JPG on the page, open one, paste one with `Ctrl+V`, or click **Try with the logo** (up to 20 MB).
+The page is in English and Brazilian Portuguese; it follows your browser, and the **EN / PT** switch
+in the top bar changes it. Light and dark themes follow your system, and the half-moon button
+switches them.
+
+![The start screen: drop an image, open one, or try the logo](docs/screenshots/ui-start.png)
+
+The input is on the left, drawn with square pixels. The SVG is on the right and stays sharp at any
+zoom. Both sides move together.
 
 ![Zoomed in: pixel stairs on the left, smooth curves on the right](docs/screenshots/ui-zoom.png)
 
 *Zoomed in on the lid of the cup. Left: the PNG. Right: the SVG.*
 
-Wipe mode puts the SVG over the input with a slider to sweep between them.
+**Wipe** puts the SVG over the input, with a slider to sweep between them.
 
 ![Wipe mode: the PNG on the left of the line, the SVG on the right](docs/screenshots/ui-wipe.png)
 
+Start with **Detail**. It sets several controls at once: **Simple** gives fewer colors and rounder
+edges, **Balanced** uses what the image type suggests, **Detailed** keeps more of the picture. Every
+control has a **?** that explains it. Controls with an **Auto** box let the tool decide until you
+untick it.
+
 | Control | What it does |
 |---|---|
-| Mouse wheel, drag, double click | Zoom, move, fit |
-| Wipe mode | The SVG over the input, with a slider to sweep between them |
-| Model | `auto` (default), `clipart`, `drawing`, `pixelart`, `photo` |
-| Remove background | Makes the color on the border transparent |
-| Clean noise | Edge-keeping filter before the colors are cut. Turn it off for crisp pixel art |
-| Colors | Number of colors. `auto` lets the tool decide |
-| Merge similar colors | Colors closer than this (in Lab color distance) become one |
-| Color dots | Click a dot to remove that color layer |
-| Smooth (0 to 5) | Rounder edges and fewer small details when higher |
-| Corners | Angle above which a point stays a sharp corner. `auto` follows Smooth |
-| Curve simplify | Higher gives fewer curve points and smaller files |
-| Min speckle | Drops tiny blobs, in input pixels |
-| Min area (px) | Merges color islands smaller than this into their surroundings |
-| Circles & ellipses | Blobs that are circles or ellipses become exact `<circle>` and `<ellipse>`. On by default |
-| Straight-edge polygons | Blobs with 3 to 8 straight edges become `<polygon>`. Off by default |
-| Shape tolerance (1 to 15 %) | How far a blob may differ from a shape and still be swapped. Default 3 |
-| Load reference SVG | Loads an SVG from another tool. "Show: mine / reference" swaps it into the right side |
-| Download / Copy SVG | Saves or copies the result |
+| Detail | Simple, Balanced or Detailed. Moves the controls below together |
+| Type of image | Auto (default), Logo / clipart, Line drawing, Pixel art, Photo |
+| Remove background | Makes the color around the edge transparent |
+| Clean noise | Smooths JPG noise before the colors are picked. Turn it off for crisp pixel art |
+| Number of colors | How many flat colors the SVG uses. Auto picks the smallest number that still looks right |
+| Join similar colors | Colors closer than this become one. Higher means fewer colors |
+| Color dots | Click a dot to hide that color, click again to bring it back |
+| Smoothness (0 to 5) | Rounder edges and fewer tiny details when higher |
+| Sharp corners | Bends sharper than this angle stay pointed. Auto follows Smoothness |
+| Smaller file | Fewer curve points: a smaller file, a little less exact |
+| Remove small spots | Spots smaller than this many pixels (1 to 1024) melt into the color around them |
+| Exact circles and ellipses | Round blobs become `<circle>` and `<ellipse>`. On by default |
+| Exact straight-edge shapes | Blobs with 3 to 8 straight sides become `<polygon>`. Off by default |
+| Shape match (1 to 15 %) | How far a blob may differ from a perfect shape and still be replaced |
+| Back to default | Resets every control |
+| Compare with an SVG… | Loads an SVG from another tool. The button next to it switches the right side between the two |
+| −, +, Fit | Zoom buttons, with the zoom level shown. The mouse wheel, drag and double click work too |
+| Download SVG, Copy SVG | Saves or copies the result. `Ctrl+S` downloads too |
 
-The status bar shows size, paths, colors, shapes found, SSIM and time. A spinner shows while the
-server works. The first conversion of an image uses the chosen model's settings and shows them in the
-controls; after that the controls are yours. The `drawing` model ignores the color, corner, curve,
-area and shape controls.
+The bottom bar shows the input size, the SVG size and the fidelity (SSIM as a percentage). Hover it
+for paths, colors, exact shapes and time. The Line drawing type traces one ink shape, so the page
+greys out the controls it does not use and says why.
 
 ## Use the command line
 
@@ -199,8 +210,8 @@ smoothsvg/
   drawing.py      Potrace for drawings, the stacked tracer, shape detection
   score.py        render, SSIM, paths and colors, compare image
   server.py       FastAPI app for the web page
-  static/         index.html and app.js, no build step
-branding/         the project logo (PNG) and its SVG, made by this tool
+  static/         index.html, app.js, i18n.js (EN and PT-BR) and logo.svg, no build step
+branding/         the project logos (PNG) and their SVGs, made by this tool
 docs/screenshots/ the pictures used in this README
 tests/            samples, baseline, and small helper scripts for tuning
 ```

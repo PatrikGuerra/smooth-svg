@@ -37,6 +37,13 @@ def zoom(page, x, y, steps):
         page.wait_for_timeout(40)
 
 
+def open_logo(page, lang):
+    page.goto(f"{URL}/?lang={lang}")
+    page.set_input_files("#file", str(IMAGE))
+    page.wait_for_function("document.body.dataset.ready === '1'", timeout=120000)
+    page.wait_for_timeout(500)
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     server = subprocess.Popen(
@@ -49,22 +56,23 @@ def main():
                 browser = p.chromium.launch(channel="msedge")
             except PlaywrightError:  # no Edge: try Chrome
                 browser = p.chromium.launch(channel="chrome")
-            page = browser.new_page(viewport={"width": 1600, "height": 900}, device_scale_factor=1)
-            page.goto(URL)
-            page.set_input_files("#file", str(IMAGE))
-            page.wait_for_function(
-                "document.getElementById('stats').textContent.includes('SSIM')", timeout=120000)
-            page.wait_for_timeout(500)
+            page = browser.new_page(viewport={"width": 1600, "height": 960}, device_scale_factor=1)
+
+            page.goto(f"{URL}/?lang=en")
+            page.wait_for_selector("#sample:not([hidden])")
+            page.screenshot(path=str(OUT / "ui-start.png"))
+
+            open_logo(page, "en")
             page.screenshot(path=str(OUT / "ui-overview.png"))
 
-            # zoom on the cup rim and the leaves: stairs on the left, curves on the right
-            zoom(page, 360, 420, 12)
+            # zoom on the cup lid: pixel stairs on the left, curves on the right
+            zoom(page, 400, 440, 12)
             page.wait_for_timeout(300)
             page.screenshot(path=str(OUT / "ui-zoom.png"))
 
-            page.dblclick("#inPane")  # back to fit
-            page.click("#wipeBtn")
-            zoom(page, 700, 470, 9)
+            page.click("#zoomFit")
+            page.click("#viewWipe")
+            zoom(page, 760, 490, 9)
             page.wait_for_timeout(300)
             page.screenshot(path=str(OUT / "ui-wipe.png"))
             browser.close()

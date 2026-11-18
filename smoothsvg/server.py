@@ -12,6 +12,7 @@ from .score import score
 
 MAX_BYTES = 20 * 1024 * 1024
 STATIC = Path(__file__).parent / "static"
+SAMPLE = Path(__file__).parent.parent / "branding" / "Logo+name.png"  # only in a repo checkout
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
@@ -20,6 +21,13 @@ app.mount("/static", StaticFiles(directory=STATIC), name="static")
 @app.get("/")
 def index():
     return FileResponse(STATIC / "index.html")
+
+
+@app.api_route("/sample.png", methods=["GET", "HEAD"])
+def sample():
+    if not SAMPLE.is_file():
+        raise HTTPException(404, "no sample image")
+    return FileResponse(SAMPLE, media_type="image/png")
 
 
 @app.post("/api/convert")
