@@ -4,7 +4,7 @@ Turn a PNG or JPG into a **simple** SVG: few colors, few paths, smooth curves
 instead of pixel stairs. The target look is the vectorizer.io result in
 [this example](https://www.vectorizer.io/images/3cuNlHQuZ5DCfp/canvas-2552x664.html).
 
-Status: P0 to P8 are built and committed. P9 is partly done: `README.md` exists (how to run the
+Status: P0 to P8 are built and committed, plus later work: own layering, per-piece stacking, shape detection. The README lists every change and its reason. P9 is partly done: `README.md` exists (how to run the
 tool and the UI), the automated tests are not written yet. How to run it: see `README.md`.
 
 | Phase | State | Note |
@@ -18,7 +18,7 @@ tool and the UI), the automated tests are not written yet. How to run it: see `R
 | P6 Clean up | done | island removal, scour, remove background |
 | P7 Presets | done | auto model, Potrace for drawings. Slider update is about 1 s per 1 MP, not under 1 s |
 | P8 Compare | done | DinoDino: SSIM 0.971 vs 0.932, 39 KB vs 78 KB. Goal met |
-| P9 Tests and docs | partly | README done. `tests/test_*.py` still to write |
+| P9 Tests and docs | partly | README and LICENSE done. `tests/test_*.py` still to write |
 
 Changes from the plan: zoom is a short custom script, not panzoom. The reference SVG is drawn
 through `<img>`. `bench` aligns a cropped reference SVG to the input before scoring.

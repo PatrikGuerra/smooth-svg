@@ -6,6 +6,9 @@ build-backend = "setuptools.build_meta"
 name = "smoothsvg"
 version = "0.1.0"
 description = "Convert PNG/JPG to simple, smooth SVG"
+readme = "README.md"
+license = {text = "GPL-3.0-or-later"}
+classifiers = ["License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)"]
 requires-python = ">=3.12"
 dependencies = [
   "vtracer", "potracer", "Pillow", "numpy", "opencv-python-headless",
