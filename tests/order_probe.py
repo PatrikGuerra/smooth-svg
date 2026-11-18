@@ -7,8 +7,8 @@ import numpy as np
 from smoothsvg.drawing import _filled_area
 from smoothsvg.pipeline import _quantized, load
 
-name = sys.argv[1] if len(sys.argv) > 1 else "dinodino.png"
-img = load(f"tests/samples/{name}")
+path = sys.argv[1] if len(sys.argv) > 1 else "branding/Logo+name.png"
+img = load(path)
 q, pal = _quantized(img, None, True, 10.0)
 rgb = np.array([[int(h[i:i + 2], 16) for i in (1, 3, 5)] for h, _ in pal], np.uint8)
 solid = q[..., 3] >= 128

@@ -4,7 +4,7 @@ Renders the result at 4x and compares with the quantized input (nearest sample).
 a few px of a color boundary are ignored (smoothing moves those on purpose). What is left is
 mostly slivers: a lower layer's color showing through where an upper layer should cover it.
 
-python tests/peek.py [sample.png]
+python tests/peek.py [image path]
 """
 import io
 import sys
@@ -16,8 +16,8 @@ from PIL import Image
 
 from smoothsvg.pipeline import _quantized, convert_array, load
 
-name = sys.argv[1] if len(sys.argv) > 1 else "dinodino.png"
-img = load(f"tests/samples/{name}")
+path = sys.argv[1] if len(sys.argv) > 1 else "branding/Logo+name.png"
+img = load(path)
 H, W = img.shape[:2]
 S = 4
 q, _ = _quantized(img, None, True, 10.0)

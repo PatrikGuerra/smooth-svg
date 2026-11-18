@@ -9,7 +9,7 @@ tool and the UI), the automated tests are not written yet. How to run it: see `R
 
 | Phase | State | Note |
 |---|---|---|
-| P0 Setup | done | 6 samples, incl. `dinodino.png` and its vectorizer.io SVG in `tests/samples/ref/` |
+| P0 Setup | done | 6 samples: the synthetic ones from `tests/make_samples.py` and one real logo |
 | P1 Baseline | done | `tests/baseline.json` holds plain vtracer numbers |
 | P2 Score | done | `bench`, SSIM, `--compare` |
 | P3 UI | done | zoom, wipe, settings. Tested through the API, not by eye |
@@ -17,7 +17,7 @@ tool and the UI), the automated tests are not written yet. How to run it: see `R
 | P5 Smooth | done | per-color mask upscale + blur. Real-ESRGAN was not added (optional) |
 | P6 Clean up | done | island removal, scour, remove background |
 | P7 Presets | done | auto model, Potrace for drawings. Slider update is about 1 s per 1 MP, not under 1 s |
-| P8 Compare | done | DinoDino: SSIM 0.971 vs 0.932, 39 KB vs 78 KB. Goal met |
+| P8 Compare | done | Against a vectorizer.io SVG of a real logo: SSIM higher, file smaller. Goal met |
 | P9 Tests and docs | partly | README and LICENSE done. `tests/test_*.py` still to write |
 
 Changes from the plan: zoom is a short custom script, not panzoom. The reference SVG is drawn
