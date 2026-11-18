@@ -6,7 +6,7 @@ instead of pixel stairs, and exact circles where the picture has circles.
 It runs on your computer. Nothing is uploaded. It has a command line and a local web page with a
 live preview and zoom.
 
-The same logo (the DinoDino sample, 1254 x 1254 px) through three tools:
+The same logo (a 1254 x 1254 px mascot logo, not included in this repository) through three tools:
 
 | Tool | Paths | Colors | Size | SSIM (1.0 = identical) |
 |---|---|---|---|---|
@@ -193,7 +193,9 @@ Plain vtracer against this tool, both through `bench`:
 | Photo (synthetic) | photo | 1 → 50 | 0.3 → 40.8 | 0.738 → 0.774 |
 
 The simple logo, drawing, JPG, photo and pixel art samples are made by `tests/make_samples.py`. The
-DinoDino logo and its vectorizer.io result are in `tests/samples/`.
+logo in the first table is not in the repository. To compare with another tool, put your image in
+`tests/samples/` and that tool's SVG in `tests/samples/ref/<same name>.svg`, then run `bench`. Both
+paths are ignored by git, so they stay on your computer.
 
 Speed: about 3 s for the DinoDino logo (1.5 megapixels), about 1 s for a 1 megapixel clipart when
 only a control changes.
@@ -213,7 +215,7 @@ smoothsvg/
   server.py       FastAPI app for the web page
   static/         index.html and app.js, no build step
 tests/
-  samples/        test images, and ref/ with SVGs from other tools
+  samples/        test images made by make_samples.py. ref/ is for SVGs from other tools (not tracked)
   baseline.json   plain vtracer numbers for bench
   make_samples.py builds the synthetic samples
 PLAN.md           the plan and status of each phase
@@ -222,7 +224,10 @@ PLAN-BROWSER.md   an idea for a version that runs fully in the browser (not buil
 
 ## Developer tools
 
-Small scripts in `tests/` used while tuning. They are not automated tests.
+Small scripts in `tests/` used while tuning. They are not automated tests. `edge_view.py`, `peek.py`
+and `order_probe.py` default to `tests/samples/dinodino.png`, a logo that is not in the repository.
+Pass the name of one of your own images instead (`peek.py` and `order_probe.py` take it as an
+argument; `edge_view.py` needs the file name edited at the top).
 
 | Script | What it shows |
 |---|---|
@@ -267,6 +272,3 @@ same terms.
 
 Other dependencies keep their own licenses: `vtracer`, `resvg-py`, `scikit-image`, `Pillow`, `numpy`,
 `fastapi` and `uvicorn`. Check each package before you redistribute a bundle.
-
-The DinoDino image and its vectorizer.io result in `tests/samples/` are test material from the
-project author. They are not covered by the GPL grant for the code.
