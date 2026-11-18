@@ -18,6 +18,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff", "httpx"]
+docs = ["playwright"]
 
 [tool.setuptools]
 packages = ["smoothsvg"]

@@ -14,7 +14,10 @@ SSIM_MAX_PX = 500_000
 def render(svg: str, w: int, h: int) -> np.ndarray:
     """Render the SVG to an RGB array of size (h, w) on a white background."""
     png = resvg_py.svg_to_bytes(svg_string=svg, width=w, height=h, background="#ffffff")
-    return np.asarray(Image.open(io.BytesIO(bytes(png))).convert("RGB"))
+    out = np.asarray(Image.open(io.BytesIO(bytes(png))).convert("RGB"))
+    if out.shape[:2] != (h, w):  # resvg keeps the aspect ratio, so odd sizes can be 1 px off
+        out = cv2.resize(out, (w, h), interpolation=cv2.INTER_AREA)
+    return out
 
 
 def flatten(img: np.ndarray) -> np.ndarray:
