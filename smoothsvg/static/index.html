@@ -95,6 +95,8 @@
   @media (prefers-reduced-motion: reduce) { .spinner, #status.busy::before { animation:none; } }
   #status.busy::before { content:""; display:inline-block; width:10px; height:10px; margin-right:6px; border:2px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
   .err { color:#dc2626; }
+  #updbar { display:flex; gap:10px; align-items:center; padding:6px 12px; background:var(--accent); color:var(--on-accent); }
+  #updbar .sp { flex:1; }
 </style>
 </head>
 <body>
@@ -110,6 +112,11 @@
   <select id="lang" data-i18n-label="lang"><option value="en">EN</option><option value="pt">PT</option></select>
   <button id="themeBtn" class="icon" type="button" data-i18n-title="theme">&#9680;</button>
 </header>
+<div id="updbar" role="status" hidden>
+  <span id="updmsg"></span><span class="sp"></span>
+  <button id="updNow" type="button" data-i18n="upd_now"></button>
+  <button id="updLater" type="button" data-i18n="upd_later"></button>
+</div>
 <main>
   <div id="panel">
     <div class="ctl">
@@ -207,6 +214,7 @@
 </main>
 <footer>
   <span id="status" aria-live="polite"><span id="sizes"></span> <span id="fid"></span></span><span class="sp"></span>
+  <label class="row hint" id="updOpt" hidden><input id="updCheck" type="checkbox"><span data-i18n="upd_check"></span></label>
   <input id="wipe" type="range" min="0" max="100" value="50" hidden data-i18n-label="wipe_pos">
   <button id="cp" type="button" data-i18n="copy" disabled></button>
   <button id="dl" type="button" class="primary" data-i18n="download" disabled></button>

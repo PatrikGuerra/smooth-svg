@@ -6,9 +6,27 @@ import cv2
 import numpy as np
 import resvg_py
 from PIL import Image
-from skimage.metrics import structural_similarity
 
 SSIM_MAX_PX = 500_000
+
+
+def ssim(a: np.ndarray, b: np.ndarray, win: int = 7) -> float:
+    """Mean SSIM of two uint8 images, same as skimage structural_similarity(channel_axis=2).
+
+    Uniform window, sample covariance, 255 range, border of win//2 px cropped from the mean.
+    """
+    x, y = a.astype(np.float64), b.astype(np.float64)
+
+    def blur(m):
+        return cv2.blur(m, (win, win), borderType=cv2.BORDER_REFLECT)
+
+    ux, uy = blur(x), blur(y)
+    n = win * win / (win * win - 1)
+    vx, vy, vxy = n * (blur(x * x) - ux * ux), n * (blur(y * y) - uy * uy), n * (blur(x * y) - ux * uy)
+    c1, c2 = (0.01 * 255) ** 2, (0.03 * 255) ** 2
+    s = ((2 * ux * uy + c1) * (2 * vxy + c2)) / ((ux**2 + uy**2 + c1) * (vx + vy + c2))
+    p = win // 2
+    return float(s[p:-p, p:-p].mean())
 
 
 def render(svg: str, w: int, h: int) -> np.ndarray:
@@ -59,7 +77,7 @@ def score(img: np.ndarray, svg: str, ms: float = 0.0, aligned: bool = False) -> 
     tags = re.findall(r"<(?:path|circle|ellipse|polygon)\b[^>]*>", svg)
     fills = set(re.findall(r'fill="(#[0-9a-fA-F]{3,8})"', svg))
     return {
-        "ssim": round(float(structural_similarity(ref, out, channel_axis=2)), 4),
+        "ssim": round(ssim(ref, out), 4),
         "paths": len(tags),
         "shapes": len(re.findall(r"<(?:circle|ellipse|polygon)\b", svg)),
         "colors": len(fills | ({"#000"} if any("fill=" not in p for p in tags) else set())),

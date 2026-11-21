@@ -347,6 +347,7 @@ $("themeBtn").onclick = () => {
 $("lang").value = LANG;
 $("lang").onchange = (e) => {
   setLang(e.target.value);
+  showUpd();
   showAll();
   if (lastResult) { showResult(); drawPalette(lastResult.palette); } else setStatus(t("no_image"));
 };
@@ -362,6 +363,36 @@ $("cp").onclick = async () => {
   setTimeout(() => ($("cp").textContent = t("copy")), 1500);
 };
 window.addEventListener("resize", fit);
+
+// Auto update: only the desktop app serves /api/update; under --ui it is a 404 and nothing shows.
+let updVersion = null;
+function showUpd() { if (updVersion) $("updmsg").textContent = t("upd_avail", { v: updVersion }); }
+async function updPoll(tries = 0) {
+  let s;
+  try {
+    const r = await fetch("/api/update");
+    if (!r.ok) return;
+    s = await r.json();
+  } catch { return; }
+  if (s.disabled_by_env) return;
+  $("updOpt").hidden = false;
+  $("updCheck").checked = s.check_updates;
+  if (s.update) { updVersion = s.update.version; showUpd(); $("updbar").hidden = false; }
+  else if (!s.checked && s.check_updates && tries < 10) setTimeout(() => updPoll(tries + 1), 3000);
+}
+$("updCheck").onchange = (e) =>
+  fetch("/api/update/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ check_updates: e.target.checked }) });
+$("updLater").onclick = () => ($("updbar").hidden = true);
+$("updNow").onclick = async () => {
+  $("updNow").disabled = $("updLater").disabled = true;
+  $("updmsg").textContent = t("upd_busy");
+  let ok = false;
+  try { ok = (await fetch("/api/update/install", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: true }) })).ok; } catch { /* app may already be closing */ }
+  if (ok) return; // the app closes itself once the installer has started
+  $("updmsg").textContent = t("upd_fail");
+  $("updNow").disabled = $("updLater").disabled = false;
+};
+updPoll();
 
 applyI18n();
 showAll();

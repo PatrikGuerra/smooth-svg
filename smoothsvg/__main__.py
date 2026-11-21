@@ -14,12 +14,22 @@ def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] == ["bench"]:
         return bench(Path(argv[1]) if len(argv) > 1 else SAMPLES)
+    if argv[:1] == ["--app"]:
+        from .app import run  # pywebview is imported lazily inside run()
+
+        return run()
     if argv[:1] == ["--ui"]:
+        import socket
         import threading
         import webbrowser
 
         import uvicorn
 
+        with socket.socket() as s:
+            if s.connect_ex(("127.0.0.1", 8765)) == 0:
+                print("error: port 8765 is already in use (is --ui already running?)",
+                      file=sys.stderr)
+                return 1
         url = "http://127.0.0.1:8765"
         threading.Timer(1.0, webbrowser.open, args=[url]).start()
         uvicorn.run("smoothsvg.server:app", host="127.0.0.1", port=8765)

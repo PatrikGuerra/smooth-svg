@@ -6,3 +6,6 @@ out/
 .ruff_cache/
 tests/samples/dinodino.png
 tests/samples/ref/
+build/
+dist/
+packaging/*.ico

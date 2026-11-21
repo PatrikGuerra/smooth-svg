@@ -13,6 +13,31 @@
   <img alt="Runs on your computer" src="https://img.shields.io/badge/runs-on%20your%20computer-lightgrey">
 </p>
 
+## Download
+
+For Windows 10 and 11 (64-bit). No Python and no terminal needed.
+
+1. Open the [latest release](https://github.com/PatrikGuerra/smooth-svg/releases/latest) and download
+   `smooth-svg-setup-X.Y.Z.exe` (about 46 MB).
+2. Run it and follow the wizard. It installs for your user only, so it does not ask for an
+   administrator password. A desktop icon is optional.
+3. Open **smooth-svg** from the Start menu. It opens in its own window, the same page described below.
+
+The installer is not code-signed, because a signing certificate costs money every year. Windows
+SmartScreen may show "Windows protected your PC" the first time. This is expected for a new,
+unsigned program. Click **More info**, then **Run anyway** (in Portuguese Windows: **Mais
+informações**, then **Executar assim mesmo**).
+
+To check that the file is the one published on the release, compare its SHA256 with the
+`SHA256SUMS.txt` file on the same release page. In PowerShell:
+
+```powershell
+Get-FileHash .\smooth-svg-setup-X.Y.Z.exe -Algorithm SHA256
+```
+
+The window needs the Microsoft Edge WebView2 Runtime, which Windows 11 and recent Windows 10 already
+have. If it is missing, the installer says so and the app opens in your browser instead.
+
 ![The web page: the PNG on the left, the SVG on the right](docs/screenshots/ui-overview.png)
 
 smooth-svg is a command line tool and a local web page. It cuts a raster image to a small palette,
@@ -42,9 +67,9 @@ SSIM is the structural similarity between the input and the SVG rendered at the 
 [vtracer](https://github.com/visioncortex/vtracer) is the tracer used inside smooth-svg. The
 "default settings" row is vtracer called directly on the same PNG.
 
-## Install
+## Install from source
 
-Built and tested on Windows with Python 3.12. Every dependency installs as a ready-made wheel, so no
+For the command line, or to change the code. Built and tested on Windows with Python 3.12. Every dependency installs as a ready-made wheel, so no
 compiler is needed.
 
 ```powershell
@@ -128,6 +153,27 @@ greys out the controls it does not use and says why.
 | `--remove-bg` | Transparent background |
 | `--compare` | Also writes `<name>.compare.png`: input, SVG, difference |
 
+## Updates
+
+The installed app (not `--ui` and not the command line) asks GitHub once a day, a few seconds after it
+opens, whether a newer release exists. The request is the plain public call to the GitHub API for the
+latest release; no data about your use or your images is sent. If there is one, the page shows **Update** and **Later**.
+Nothing is installed until you click **Update**.
+
+On **Update** the app downloads the installer from this repository's releases, checks its SHA256
+against `SHA256SUMS.txt` from the same release, and only then runs it. The installer closes the app,
+replaces the files and opens it again. Any error (no internet, bad hash) is written to
+`%LOCALAPPDATA%\smooth-svg\app.log` and the current version keeps working.
+
+To turn it off, untick **Check for updates on start** in the page, or set the environment variable
+`SMOOTHSVG_NO_UPDATE=1`. The choice is saved in `%APPDATA%\smooth-svg\settings.json`.
+
+Limit: `SHA256SUMS.txt` sits on the same release as the installer. It catches a corrupted or swapped
+download, but not someone who can edit the release itself (for example, with a stolen GitHub
+account). Without a signing certificate there is no cheap fix. What protects you is HTTPS, the app
+accepting downloads only from this repository's releases, and two-factor login on the maintainer's
+account.
+
 ## Models
 
 `auto` looks at the pixels and picks one. You can force any of them.
@@ -194,14 +240,14 @@ Timing on the author's Windows PC: about 3 s for the 1.5 megapixel project logo,
   outline is not one. A ring joined to a handle is not recognized either.
 - Removing the background on an image with no clear border color removes the wrong color.
 - Polygon detection can flatten curvy pixel art, which is why it is off by default.
-- The project has no automated test suite yet. Quality is checked with `bench` and by eye, and the
-  web page was checked through its API and with browser screenshots.
 
 ## Development
 
 ```
 smoothsvg/
-  __main__.py     command line, bench, --ui
+  __main__.py     command line, bench, --ui, --app
+  app.py          app mode: local server on a free port and a native window (pywebview)
+  updater.py      daily update check, download and SHA256 check (app mode only)
   pipeline.py     the steps, convert_array and convert_image
   presets.py      the model table
   classify.py     picks the model
@@ -211,13 +257,48 @@ smoothsvg/
   score.py        render, SSIM, paths and colors, compare image
   server.py       FastAPI app for the web page
   static/         index.html, app.js, i18n.js (EN and PT-BR) and logo.svg, no build step
+packaging/        Inno Setup script, icon and third-party notices for the Windows installer
+.github/workflows/ ci.yml (ruff and pytest) and release.yml (builds the installer on a `v*` tag)
 branding/         the project logos (PNG) and their SVGs, made by this tool
 docs/screenshots/ the pictures used in this README
-tests/            samples, baseline, and small helper scripts for tuning
+tests/            pytest tests, samples, baseline, and small helper scripts for tuning
 ```
 
 The page only accepts PNG and JPG (checked by content, not by file name), up to 20 MB and 16
 megapixels, and only listens on `127.0.0.1`.
+
+Run the tests and the linter with:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m ruff check .
+```
+
+Optional extras: `dev` (pytest, ruff, httpx), `docs` (playwright), `app` (pywebview, for the window)
+and `build` (PyInstaller, for the `.exe`).
+
+Run the app window from source:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[app]"
+.\.venv\Scripts\python.exe -m smoothsvg --app
+```
+
+`--app` picks a free port, opens a native window, and keeps one window per user. Set
+`SMOOTHSVG_BROWSER=1` to use the browser instead. `--ui` stays as before: a fixed port (8765) and
+your browser. The app writes `app.log` to `%LOCALAPPDATA%\smooth-svg\`.
+
+Build the installer (needs [Inno Setup 6](https://jrsoftware.org/isinfo.php) for the last step):
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[app,build]"
+.\.venv\Scripts\python.exe packaging\make_ico.py
+.\.venv\Scripts\pyinstaller.exe packaging\smooth-svg.spec --noconfirm   # dist\smooth-svg\smooth-svg.exe
+iscc /DAppVersion=0.2.0 packaging\smooth-svg.iss                           # dist\smooth-svg-setup-0.2.0.exe
+```
+
+Pushing a tag `vX.Y.Z` that matches `smoothsvg.__version__` runs the same steps on GitHub and
+publishes the installer and `SHA256SUMS.txt` as a release.
 
 `tests\screenshots.py` retakes the README pictures with Edge or Chrome
 (`pip install -e ".[docs]"`). The other scripts in `tests\` are small tuning helpers, not tests.
@@ -233,5 +314,5 @@ Apache-2.0, which is not compatible with GPL-2.0-only but is compatible with GPL
 is the license that fits all three, so any program that includes this code must be released under the
 same terms.
 
-Other dependencies keep their own licenses: `vtracer`, `resvg-py`, `scikit-image`, `Pillow`, `numpy`,
-`fastapi`, `uvicorn` and (for the screenshots only) `playwright`.
+Other dependencies keep their own licenses: `vtracer`, `resvg-py`, `Pillow`, `numpy`,
+`fastapi`, `uvicorn`, `pywebview` (app window only) and (for the screenshots only) `playwright`.

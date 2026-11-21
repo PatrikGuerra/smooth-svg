@@ -1,0 +1,38 @@
+﻿smooth-svg: third-party components
+===================================
+smooth-svg is GPL-3.0-or-later (see LICENSE). The Windows build bundles the
+components below. Versions are those used when this list was generated with
+pip-licenses; the bundled build may differ slightly. Review by hand before each release.
+
+Python packages
+---------------
+fastapi 0.163.1                 MIT
+starlette 1.10.0                BSD-3-Clause
+pydantic 2.14.3                 MIT
+uvicorn 0.54.0                  BSD-3-Clause
+python-multipart 0.0.34         Apache-2.0
+numpy 2.5.5                     BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0
+opencv-python-headless 5.1.0.95 Apache-2.0 (OpenCV); wheel also bundles FFmpeg (LGPL-2.1+), see below
+pillow 13.0.0                   MIT-CMU
+scikit-image 0.26.0             BSD-3-Clause
+scour 0.38.2                    Apache-2.0
+vtracer 0.6.15                  MIT
+potracer 0.0.4                  GPL-2.0-or-later
+resvg-py 0.5.0                  license not declared in package metadata; wraps resvg (MPL-2.0). TO VERIFY upstream before release.
+pywebview                       BSD-3-Clause (added with the app extra; confirm version and its dependencies, e.g. pythonnet MIT, proxy_tools, bottle MIT, when the app is built)
+
+Build tools (not shipped inside the app)
+----------------------------------------
+PyInstaller      GPL-2.0-or-later with a special exception allowing bundling programs of any license
+Inno Setup       Inno Setup License (free, permissive)
+
+Runtime used, not bundled
+-------------------------
+Microsoft Edge WebView2 Runtime  Microsoft license; installed separately by the user or Windows.
+
+Notes
+-----
+- opencv-python-headless wheels include FFmpeg libraries under LGPL-2.1+.
+  Corresponding source: https://github.com/opencv/opencv-python and https://ffmpeg.org/
+  Not legally reviewed; this is a technical check.
+- Corresponding source for smooth-svg: https://github.com/PatrikGuerra/smooth-svg

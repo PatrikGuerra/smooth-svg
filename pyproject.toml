@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "smoothsvg"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Convert PNG/JPG to simple, smooth SVG"
 readme = "README.md"
 license = {text = "GPL-3.0-or-later"}
@@ -12,16 +12,21 @@ classifiers = ["License :: OSI Approved :: GNU General Public License v3 or late
 requires-python = ">=3.12"
 dependencies = [
   "vtracer", "potracer", "Pillow", "numpy", "opencv-python-headless",
-  "scour", "resvg-py", "scikit-image",
+  "scour", "resvg-py",
   "fastapi", "uvicorn", "python-multipart",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff", "httpx"]
 docs = ["playwright"]
+app = ["pywebview"]
+build = ["pyinstaller"]
 
 [tool.setuptools]
 packages = ["smoothsvg"]
+
+[tool.setuptools.dynamic]
+version = {attr = "smoothsvg.__version__"}
 
 [tool.ruff]
 line-length = 100
