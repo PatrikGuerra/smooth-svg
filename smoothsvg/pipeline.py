@@ -67,7 +67,7 @@ def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smoot
                   min_area: int | None = None, remove_bg: bool = False, merge_de: float = 10.0,
                   corner: int | None = None, detail: int | None = None, clean: bool = True,
                   tracer: str = "layers", ellipses: bool = True, polygons: bool = False,
-                  shape_tol: float = 3.0, groups=(), base=None, **opts):
+                  shape_tol: float = 3.0, groups=(), base=None, pre=None, **opts):
     """Smooth, quantize to a flat palette, clean, drop disabled colors, trace, shrink.
 
     Returns (svg, palette). min_area and filter_speckle are in original pixels.
@@ -78,6 +78,8 @@ def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smoot
     for exact SVG shapes. shape_tol: percent of mismatch allowed (3 means 97% overlap).
     groups: manual merges [([hex, ...], hex)] from quantize.parse_groups, applied after merge_de.
     base: optional list that receives the palette before the groups, so a UI can list the colors to join.
+    pre: optional dict that receives what the tracer is fed: "reduced" (flat colors, original size),
+    "upscaled" (the exact image traced, with alpha), "k" (its upscale factor) and "palette".
     """
     h, w = img.shape[:2]
     q, palette = _quantized(img, colors, bool(smooth) and clean, merge_de)
@@ -91,9 +93,13 @@ def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smoot
     disabled = set(disabled)
     if remove_bg and (bg := border_color(q, palette)):
         disabled.add(bg)
+    if pre is not None:
+        pre["reduced"] = q.copy()
     q, k = upscale(q, pal_rgb, smooth) if len(pal_rgb) else (q, 1)
     for hx in disabled:
         q[(q[..., :3] == [int(hx[i:i + 2], 16) for i in (1, 3, 5)]).all(axis=2), 3] = 0
+    if pre is not None:
+        pre.update(upscaled=q.copy(), k=k, palette=pal_rgb)
     # color_precision=8 and layer_difference=0 keep the palette exact (vtracer discussion #83).
     # Coordinates are in upscaled px, so length_threshold grows with k; 1 decimal is enough.
     opts = {
