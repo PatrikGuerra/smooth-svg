@@ -1,3 +1,6 @@
+import json
+import re
+
 import cv2
 import numpy as np
 
@@ -58,3 +61,52 @@ def quantize(img: np.ndarray, n: int | None = None, max_n: int = 16, merge_de: f
     share = np.bincount(idx[solid], minlength=len(keep)) / solid.sum()
     palette = [(f"#{c[0]:02X}{c[1]:02X}{c[2]:02X}", round(float(s), 4)) for c, s in zip(rgb, share)]
     return out, sorted(palette, key=lambda p: -p[1])
+
+
+HEX = re.compile(r"#[0-9A-Fa-f]{6}")
+MAX_GROUPS, MAX_FROM = 16, 32
+
+
+def _rgb(hx: str) -> list[int]:
+    return [int(hx[i:i + 2], 16) for i in (1, 3, 5)]
+
+
+def parse_groups(raw: str) -> list[tuple[list[str], str]]:
+    """Check the merge_groups JSON: [{"from": ["#RRGGBB", ...], "to": "#RRGGBB"}, ...].
+
+    Raises ValueError on anything else. Colors come back upper-case. Empty text means no groups.
+    """
+    if not raw.strip():
+        return []
+    if len(raw) > 4096:
+        raise ValueError("merge_groups too long")
+    try:
+        data = json.loads(raw)
+    except ValueError as e:
+        raise ValueError("merge_groups is not valid JSON") from e
+    if not isinstance(data, list) or len(data) > MAX_GROUPS:
+        raise ValueError(f"merge_groups must be a list of at most {MAX_GROUPS} groups")
+    out = []
+    for g in data:
+        src = g.get("from") if isinstance(g, dict) else None
+        to = g.get("to") if isinstance(g, dict) else None
+        if (not isinstance(src, list) or not 2 <= len(src) <= MAX_FROM
+                or not all(isinstance(c, str) and HEX.fullmatch(c) for c in src)
+                or not isinstance(to, str) or not HEX.fullmatch(to)):
+            raise ValueError('each merge group needs "from" (2-32 #RRGGBB colors) and "to" (#RRGGBB)')
+        out.append(([c.upper() for c in src], to.upper()))
+    return out
+
+
+def merge_groups(q: np.ndarray, palette: list, groups) -> tuple[np.ndarray, list]:
+    """Turn the chosen colors into one, and only those. Runs after the automatic merge, on the
+    colors that are left, so it never splits them again. Groups apply in order; q is edited in
+    place. A `from` color that is not in the picture is ignored."""
+    share = dict(palette)
+    for src, to in groups:
+        src = [c for c in src if c in share and c != to]
+        for c in src:
+            q[(q[..., :3] == _rgb(c)).all(axis=2), :3] = _rgb(to)
+        if src:
+            share[to] = share.get(to, 0) + sum(share.pop(c) for c in src)
+    return q, sorted(share.items(), key=lambda p: -p[1])
