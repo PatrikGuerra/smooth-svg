@@ -8,13 +8,13 @@
 <style>
   :root { color-scheme: light dark;
     --bg:#f4f5f4; --fg:#16201d; --card:#fff; --line:#d5dad7; --muted:#5d6b66;
-    --accent:#15803d; --on-accent:#fff; --primary:#023730; --on-primary:#fff; --tip-bg:#16201d; --tip-fg:#fff; }
+    --accent:#15803d; --main-ring:#00a82d; --on-accent:#fff; --primary:#023730; --on-primary:#fff; --tip-bg:#16201d; --tip-fg:#fff; }
   :root[data-theme=dark] {
     --bg:#121816; --fg:#eef3f0; --card:#1c2421; --line:#33403b; --muted:#9aa8a2;
-    --accent:#84cc16; --on-accent:#0b1f1a; --primary:#84cc16; --on-primary:#0b1f1a; --tip-bg:#eef3f0; --tip-fg:#121816; }
+    --accent:#84cc16; --main-ring:#39ff14; --on-accent:#0b1f1a; --primary:#84cc16; --on-primary:#0b1f1a; --tip-bg:#eef3f0; --tip-fg:#121816; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme=light]) {
     --bg:#121816; --fg:#eef3f0; --card:#1c2421; --line:#33403b; --muted:#9aa8a2;
-    --accent:#84cc16; --on-accent:#0b1f1a; --primary:#84cc16; --on-primary:#0b1f1a; --tip-bg:#eef3f0; --tip-fg:#121816; } }
+    --accent:#84cc16; --main-ring:#39ff14; --on-accent:#0b1f1a; --primary:#84cc16; --on-primary:#0b1f1a; --tip-bg:#eef3f0; --tip-fg:#121816; } }
   * { box-sizing:border-box; }
   [hidden] { display:none !important; }
   body { margin:0; font:14px system-ui,sans-serif; background:var(--bg); color:var(--fg); height:100vh; display:flex; flex-direction:column; }
@@ -95,6 +95,40 @@
   @media (prefers-reduced-motion: reduce) { .spinner, #status.busy::before { animation:none; } }
   #status.busy::before { content:""; display:inline-block; width:10px; height:10px; margin-right:6px; border:2px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
   .err { color:#dc2626; }
+  #mgDlg { position:fixed; z-index:40; top:var(--my,60px); left:var(--mx,calc(100vw - 340px)); width:328px; max-height:calc(100vh - 140px); display:flex; flex-direction:column;
+    background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 28px #0005; }
+  #mgBar { display:flex; align-items:center; gap:8px; padding:8px 8px 8px 12px; border-bottom:1px solid var(--line); cursor:move; touch-action:none; user-select:none; border-radius:12px 12px 0 0; }
+  #mgBar h2 { margin:0; font-size:14px; flex:1; }
+  #mgBody { overflow-y:auto; padding:10px 12px 12px; display:flex; flex-direction:column; gap:8px; }
+  #mgBody h3 { margin:6px 0 0; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+  .mglist { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
+  .mglist li { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .mglist li.off .sw { opacity:.3; border-style:dashed; }
+  .mglist label.pick { display:flex; align-items:center; gap:8px; flex:1; cursor:pointer; }
+  .sw { width:22px; height:22px; border-radius:50%; border:2px solid var(--line); flex:none; display:inline-block; }
+  .sw.sm { width:14px; height:14px; border-width:1px; margin-right:-4px; }
+  .opts { display:flex; flex-wrap:wrap; gap:6px; align-items:flex-start; flex:1; }
+  .opt { all:unset; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; gap:2px; width:62px; padding:4px 2px; border-radius:8px; cursor:pointer; font-size:11px; text-align:center; }
+  .opt:focus-visible, .opt.plus:focus-within { outline:2px solid var(--fg); outline-offset:2px; }
+  .opt .dot { width:30px; height:30px; border-radius:50%; border:2px solid var(--line); display:grid; place-items:center; font-size:16px; font-weight:700; line-height:1; color:#000; text-shadow:0 0 3px #fff, 0 0 3px #fff; }
+  .opt[aria-checked=true] .dot, .opt.on .dot { border-color:var(--main-ring); box-shadow:0 0 0 2px var(--main-ring); }
+  .opt[aria-checked=true] .dot::after, .opt.on .dot::after { content:"\2713"; }
+  .opt .mtag { color:var(--fg); font-weight:700; min-height:1em; }
+  .opt.plus .dot { border-style:dashed; color:var(--muted); text-shadow:none; position:relative; overflow:hidden; }
+  .opt.plus input { position:absolute; inset:0; opacity:0; width:100%; height:100%; cursor:pointer; }
+  .opt.plus.on .dot { border-style:solid; }
+  .mglist li.off .opt .dot { opacity:.4; }
+  .mglist li.grp { align-items:flex-start; }
+  .mglist .sp { flex:1; }
+  .mglist input[role=switch] { appearance:none; width:34px; height:20px; border-radius:10px; background:var(--line); position:relative; cursor:pointer; flex:none; margin:0; }
+  .mglist input[role=switch]::after { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:var(--card); border:1px solid var(--muted); box-sizing:border-box; }
+  .mglist input[role=switch]:checked { background:var(--accent); }
+  .mglist input[role=switch]:checked::after { left:16px; }
+  .mglist input[role=switch]:disabled { opacity:.45; cursor:default; }
+  @media (prefers-reduced-motion: no-preference) { .mglist input[role=switch]::after { transition:left .12s; } #mgDlg:not([hidden]) { animation:fade .15s; } @keyframes fade { from { opacity:0; } } }
+  #palette span { width:26px; height:26px; border-radius:50%; border:2px solid var(--line); display:inline-block; }
+  #palette span.off { opacity:.3; border-style:dashed; }
+  @media (max-width:700px) { #mgDlg { left:0; right:0; top:auto; bottom:0; width:auto; max-height:50vh; border-radius:12px 12px 0 0; } #mgBar { cursor:default; } }
   #updbar { display:flex; gap:10px; align-items:center; padding:6px 12px; background:var(--accent); color:var(--on-accent); }
   #updbar .sp { flex:1; }
 </style>
@@ -154,6 +188,7 @@
     </div>
     <div id="palette" role="group"></div>
     <small id="paletteHint" class="hint" data-i18n="palette_hint" hidden></small>
+    <button id="mergeBtn" type="button" data-i18n="mg_open" disabled></button>
 
     <h2 data-i18n="sec_edges"></h2>
     <div class="ctl">
@@ -219,7 +254,21 @@
   <button id="cp" type="button" data-i18n="copy" disabled></button>
   <button id="dl" type="button" class="primary" data-i18n="download" disabled></button>
 </footer>
-<script src="/static/i18n.js"></script>
+<section id="mgDlg" role="dialog" aria-labelledby="mgTitle" tabindex="-1" hidden>
+  <div id="mgBar" tabindex="0" data-i18n-title="mg_move">
+    <h2 id="mgTitle" data-i18n="mg_title"></h2>
+    <button id="mgClose" type="button" class="icon" data-i18n-title="mg_close">&times;</button>
+  </div>
+  <div id="mgBody">
+    <p class="hint" data-i18n="mg_help"></p>
+    <p class="note" id="mgNote" data-i18n="mg_off" hidden></p>
+    <ul id="mgColors" class="mglist"></ul>
+    <button id="mgAdd" type="button" data-i18n="mg_add" disabled></button>
+    <h3 data-i18n="mg_groups"></h3>
+    <ul id="mgGroups" class="mglist"></ul>
+    <button id="mgReset" type="button" data-i18n="mg_reset"></button>
+  </div>
+</section><script src="/static/i18n.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

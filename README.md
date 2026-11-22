@@ -117,7 +117,8 @@ untick it.
 | Clean noise | Smooths JPG noise before the colors are picked. Turn it off for crisp pixel art |
 | Number of colors | How many flat colors the SVG uses. Auto picks the smallest number that still looks right |
 | Join similar colors | Colors closer than this become one. Higher means fewer colors |
-| Color dots | Click a dot to hide that color, click again to bring it back |
+| Edit colors… | Opens a small window that floats over the page: drag it by its title bar, close it with the × or Esc. Every color has a switch to turn it off or on. Tick two or more colors and press Join to make one; pick its final color (one of them, or a new one). Undo a group, or press Back to default to clear all. The preview updates by itself about a quarter of a second after each change. Joining runs after "Join similar colors" and is not used for line drawings |
+| Color dots | Only show the colors in the SVG. A faded dot is a color that is turned off. Change it in Edit colors |
 | Smoothness (0 to 5) | Rounder edges and fewer tiny details when higher |
 | Sharp corners | Bends sharper than this angle stay pointed. Auto follows Smoothness |
 | Smaller file | Fewer curve points: a smaller file, a little less exact |

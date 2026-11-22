@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .pipeline import convert_image, load_bytes
 from .presets import MODELS
+from .quantize import parse_groups
 from .score import score
 
 MAX_BYTES = 20 * 1024 * 1024
@@ -48,6 +49,7 @@ async def convert(
     ellipses: bool = Form(True),
     polygons: bool = Form(False),
     shape_tol: float = Form(3.0),
+    merge_groups: str = Form(""),
 ):
     data = await file.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
@@ -62,6 +64,11 @@ async def convert(
             and 0.5 <= shape_tol <= 20):
         raise HTTPException(
             400, "merge_de 0-60, corner 0-180, detail 0-20, min_area >= 0, shape_tol 0.5-20")
+    try:
+        groups = parse_groups(merge_groups)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    base: list = []  # palette before the manual groups; stays empty for line drawings
     t = time.perf_counter()
     svg, palette, used = convert_image(
         img,
@@ -79,6 +86,8 @@ async def convert(
         ellipses=ellipses,
         polygons=polygons,
         shape_tol=shape_tol,
+        groups=groups,
+        base=base,
     )
     stats = score(img, svg, (time.perf_counter() - t) * 1000)
-    return {"svg": svg, "stats": stats, "palette": palette, "used": used}
+    return {"svg": svg, "stats": stats, "palette": palette, "base": base or palette, "used": used}
