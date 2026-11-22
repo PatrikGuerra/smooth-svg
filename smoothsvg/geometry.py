@@ -158,7 +158,8 @@ def _arc_ok(p, eps, maxr):
     if len(p) < 6:
         return None
     f = _circle(p)
-    if f is None or f[2] > maxr:
+    # a tiny circle on a sharp tip is the pixel staircase, not a round corner: keep the tip sharp
+    if f is None or f[2] > maxr or f[2] < 4 * eps:
         return None
     cx, cy, r = f
     if np.abs(np.hypot(p[:, 0] - cx, p[:, 1] - cy) - r).max() > eps:

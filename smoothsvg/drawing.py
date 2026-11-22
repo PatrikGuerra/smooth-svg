@@ -140,6 +140,7 @@ def trace_stacked(q: np.ndarray, palette_rgb: np.ndarray, **vt) -> str:
     polygons = vt.pop("polygons", False)
     rings = vt.pop("rings", False)
     tol = vt.pop("shape_tol", 0.03)
+    soften = vt.pop("soften", 0.0)  # blur sigma in px for masks that were not upscaled
     inset, collar, bleed = vt.pop("inset", 3), vt.pop("collar", 2), vt.pop("bleed", 2)
     H, W = q.shape[:2]
     rgb, solid = q[..., :3], q[..., 3] >= 128
@@ -178,6 +179,8 @@ def trace_stacked(q: np.ndarray, palette_rgb: np.ndarray, **vt) -> str:
         if later.any():
             near_border = _grow(~shape, inset)
             shape &= ~(near_border & later & ~_grow(own, collar))
+        if soften:  # at 1:1 a 1 px stair becomes a bump after the spline fit; round it off first
+            shape = cv2.GaussianBlur(shape.astype(np.float32), (0, 0), soften) > 0.5
         fill = _hex(palette_rgb[color_of[cid]])
         found = []
         if ellipses or polygons:
