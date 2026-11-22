@@ -114,8 +114,7 @@ def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smoot
     elif tracer == "layers":  # own layering: avoids the lower color peeking out at edges
         vt = {key: opts[key] for key in ("filter_speckle", "corner_threshold", "length_threshold",
                                          "path_precision") if key in opts}
-        vt.update(ellipses=ellipses, polygons=polygons, rings=rings, shape_tol=shape_tol / 100,
-                  soften=1.5 if k == 1 and smooth else 0.0)  # k=1: big image, no upscale blur
+        vt.update(ellipses=ellipses, polygons=polygons, rings=rings, shape_tol=shape_tol / 100)
         svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{q.shape[1]}" '
                f'height="{q.shape[0]}">{trace_stacked(q, pal_rgb, **vt)}</svg>')
     else:

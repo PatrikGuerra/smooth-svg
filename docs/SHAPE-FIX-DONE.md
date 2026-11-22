@@ -2,7 +2,21 @@
 
 PR: https://github.com/PatrikGuerra/smooth-svg/pull/4 (branch `feat/shape-fix-g-v`, base `feat/svg-geometry-fit`). Not merged.
 
-## Causes (both in shared code)
+## Review 2 (2026-11-22): soften removed
+
+The user saw the cup icon get worse. Cause: `soften` blurred each piece mask after the bleed/inset step, so the steps where one layer goes under the next became small lumps (cup wall meets the lid, lid ends). The g bump was not even fixed by it in a stable way. `soften` and its test are removed. Only the `_arc_ok` radius rule stays.
+
+Now, vs the original PR base (`tests/svgfit_cmp.py`, geometry fit on): Logo+name SSIM 0.983 -> 0.9833, 16.5 -> 17.5 KB. Cup error vs original: same as before the PR (3 872 602 both). Text error: 2 587 168 -> 2 544 488 (lower is better).
+
+Crops, columns = original | PR base | with soften | now:
+`docs/shape-fix/cup_corner_orig_before_soften_now.png`, `docs/shape-fix/v_orig_before_soften_now.png`, `docs/shape-fix/g_orig_before_soften_now.png`.
+
+Still open:
+- g tail bump: still there. The color mask is clean at that spot; vtracer keeps a 2 px flat pixel run as a corner (`h-2` in the path). Higher corner threshold, longer length threshold and mask blur in `upscale` did not remove it. Tracing at 2x removes it but doubles the size (33 KB) and makes the cup edges wobble.
+- v notch: no round dot now, but the tip ends in a 1 px flat, and the right inner edge bends a little near the tip.
+- v outer curve and top: smooth now (it was a polygon of straight lines before).
+
+## Causes (first pass)
 
 1. **v inner dot and coarse bottom** (`smoothsvg/geometry.py`, `_arcs`/`_arc_ok`). The outline fit accepted a 1.9 px circle at the sharp notch tip as an "arc", which drew the round dot. The same fit turned the rounded bottom into straight facets. Fix: arcs with radius under `4*eps` are refused, so the tip stays sharp. The rounded bottom is now traced by the spline path.
 2. **g tail bump and stem step** (`smoothsvg/drawing.py`, `trace_stacked`). The logo is large (2172x724), so `upscale` runs at k=1 and there is no blur. The 1 px stairs of the color mask became kinks after vtracer's spline fit. Fix: new `soften` option, a Gaussian blur (sigma 1.5) plus threshold on each piece mask, passed by `pipeline.convert_array` only when k == 1 and smooth > 0.

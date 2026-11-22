@@ -73,20 +73,3 @@ def test_tiny_circle_is_not_an_arc():
     ring = lambda r: np.c_[50 + r * np.cos(t), 50 + r * np.sin(t)]
     assert _arc_ok(ring(1.9), 0.8, 500) is None
     assert _arc_ok(ring(30), 0.8, 500) is not None
-
-
-def test_soften_drops_stair_bumps_at_1_to_1():
-    # g tail bump: at k=1 the 1 px stairs of the mask came out as small kinks in the curve
-    import re
-
-    from smoothsvg.drawing import trace_stacked
-
-    q = np.zeros((300, 300, 4), np.uint8)
-    cv2.ellipse(q, (150, 150), (120, 70), 23, 0, 360, (*DARK, 255), -1)  # hard edge
-    pal = np.array([DARK], np.uint8)
-    n = {}
-    for s in (0.0, 1.5):
-        svg = trace_stacked(q, pal, rings=False, ellipses=False, soften=s, filter_speckle=1,
-                            corner_threshold=75, length_threshold=4.0, path_precision=1)
-        n[s] = len(re.findall(r"[a-zA-Z]", re.search(r' d="([^"]*)"', svg).group(1)))
-    assert n[1.5] < n[0.0]
