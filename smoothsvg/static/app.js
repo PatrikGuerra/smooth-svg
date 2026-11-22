@@ -8,8 +8,8 @@ let groups = []; // manual merges [{from:[hex..], to:hex, neo?}]; "neo" = final 
 
 // "Remove small spots" moves in steps, because 1 px and 1000 px both matter.
 const SPOTS = [1, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
-const SLIDERS = ["colors", "merge", "smooth", "corner", "curve", "spots", "tol"];
-const LOCKED_BY_DRAWING = ["colors", "merge", "corner", "curve", "spots", "tol", "ellipses", "polygons", "rings"];
+const SLIDERS = ["colors", "merge", "smooth", "corner", "curve", "spots", "tol", "fit"];
+const LOCKED_BY_DRAWING = ["colors", "merge", "corner", "curve", "spots", "tol", "fit", "ellipses", "polygons", "rings", "gfit"];
 
 // ---------- controls ----------
 
@@ -27,6 +27,7 @@ function show(id) {
   if (isAuto(id)) out.textContent = ""; // the ticked Auto box already says it
   else if (id === "spots") out.textContent = SPOTS[+$(id).value] + " px";
   else if (id === "tol") out.textContent = $(id).value + " %";
+  else if (id === "fit") out.textContent = ($(id).value / 100).toFixed(2) + " px";
   else out.textContent = $(id).value;
   $(id).disabled = isAuto(id) || (drawingLock && LOCKED_BY_DRAWING.includes(id));
 }
@@ -80,6 +81,8 @@ function resetAll() {
   $("polygons").checked = false;
     $("rings").checked = true;
   $("tol").value = 3;
+  $("gfit").checked = true;
+  $("fit").value = 35;
   setLevel("balanced");
 }
 
@@ -87,7 +90,7 @@ function setDrawingLock(on) {
   drawingLock = on;
   $("drawingNote").hidden = !on;
   document.querySelectorAll("[data-locks]").forEach((el) => el.classList.toggle("muted", on));
-  ["ellipses", "polygons", "rings", "colors_auto", "corner_auto", "curve_auto", "spots_auto"].forEach((id) => ($(id).disabled = on));
+  ["ellipses", "polygons", "rings", "gfit", "colors_auto", "corner_auto", "curve_auto", "spots_auto"].forEach((id) => ($(id).disabled = on));
   showAll();
 }
 
@@ -222,6 +225,8 @@ async function run() {
   fd.append("ellipses", $("ellipses").checked);
   fd.append("polygons", $("polygons").checked);
   fd.append("rings", $("rings").checked);
+  fd.append("geometry_fit", $("gfit").checked ? "auto" : "off");
+  fd.append("fit_tol", val("fit") / 100);
   try {
     let res;
     try { res = await fetch("/api/convert", { method: "POST", body: fd }); }
@@ -321,7 +326,7 @@ SLIDERS.forEach((id) => {
   });
 });
 document.querySelectorAll("#levels button").forEach((b) => (b.onclick = () => setLevel(b.dataset.level)));
-["bg", "denoise", "ellipses", "polygons", "rings"].forEach((id) => ($(id).onchange = run));
+["bg", "denoise", "ellipses", "polygons", "rings", "gfit"].forEach((id) => ($(id).onchange = run));
 $("model").onchange = () => setLevel("balanced");
 $("reset").onclick = resetAll;
 

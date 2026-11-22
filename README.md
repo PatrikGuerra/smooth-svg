@@ -127,6 +127,8 @@ untick it.
 | Exact straight-edge shapes | Blobs with 3 to 8 straight sides become `<polygon>`. Off by default |
 | Rings & arcs | Rings (the letter o) become one `<path>` of two ellipse arcs, circles that another layer partly hides become `<circle>`/`<ellipse>`, and outlines made of lines and round corners use `A` arcs. On by default |
 | Shape match (1 to 15 %) | How far a blob may differ from a perfect shape and still be replaced |
+| Geometry fit | Last step, on the finished SVG: stretches of an outline that one circle or ellipse arc reproduces become exact `A` arcs (or a `<circle>`/`<ellipse>` for a whole path). Each swap is undone if the render gets farther from your image. On by default, off for line drawings and pixel art |
+| Geometry fit tolerance (0.1 to 2 px) | How far an arc may stray from the traced outline, in pixels of your image. The average gap must stay under 0.8 times this, the worst point under 1.75 times |
 | Back to default | Resets every control |
 | Compare with an SVG… | Loads an SVG from another tool. The button next to it switches the right side between the two |
 | −, +, Fit | Zoom buttons, with the zoom level shown. The mouse wheel, drag and double click work too |
@@ -210,6 +212,13 @@ The table is in `smoothsvg/presets.py` and the rules are in `smoothsvg/classify.
    that splits into straight runs and circle arcs is written with `A` commands.
 6. **Trace and shrink.** vtracer's binary mode traces each remaining piece into spline curves, and
    scour writes the SVG with relative coordinates and short numbers.
+7. **Geometry fit** (`svgfit.py`, just before scour). Reads the points of every finished path and
+   looks for runs of curve segments that one circle or ellipse arc follows within the tolerance, at
+   least 25 degrees wide and at least 4 px long. They become one `A` command pinned to the same end
+   points, so no gap opens next to the neighbors. A closed outline that is a whole circle or ellipse
+   becomes `<circle>`/`<ellipse>` (or two arcs when it is a hole in a bigger path, which also keeps the
+   fill rule). Then the SVG is rendered before and after, and any swap that moves its area farther from
+   your image is undone.
 
 ## Benchmark
 
@@ -246,6 +255,10 @@ Timing on the author's Windows PC: about 3 s for the 1.5 megapixel project logo,
   or a letter that is only roughly oval, stays a traced curve.
 - Removing the background on an image with no clear border color removes the wrong color.
 - Polygon detection can flatten curvy pixel art, which is why it is off by default.
+- Geometry fit adds about 2 s on a 1.5 megapixel logo and 4 s on a busy photo. It does not make
+  straight runs from curves, does not use arcs on a turn sharper than 35 degrees, and only reads
+  `transform` values that keep circles round (translate, rotate, uniform scale). Letters that are
+  only roughly oval keep their curves.
 
 ## Development
 
@@ -254,6 +267,7 @@ smoothsvg/
   __main__.py     command line, bench, --ui, --app
   app.py          app mode: local server on a free port and a native window (pywebview)
   geometry.py     rings, partly hidden circles and arc outlines (Rings & arcs)
+  svgfit.py       last pass: arcs, circles and ellipses fitted to the finished SVG (Geometry fit)
   updater.py      daily update check, download and SHA256 check (app mode only)
   pipeline.py     the steps, convert_array and convert_image
   presets.py      the model table

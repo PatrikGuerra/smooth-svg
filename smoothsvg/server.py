@@ -51,6 +51,8 @@ async def convert(
     rings: str = Form("true"),
     shape_tol: float = Form(3.0),
     merge_groups: str = Form(""),
+    geometry_fit: str = Form("auto"),
+    fit_tol: float = Form(0.35),
 ):
     data = await file.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
@@ -67,6 +69,8 @@ async def convert(
             400, "merge_de 0-60, corner 0-180, detail 0-20, min_area >= 0, shape_tol 0.5-20")
     if rings not in ("true", "false"):
         raise HTTPException(400, "rings must be true or false")
+    if geometry_fit not in ("off", "auto") or not 0.1 <= fit_tol <= 2:
+        raise HTTPException(400, "geometry_fit must be off or auto, fit_tol 0.1-2")
     try:
         groups = parse_groups(merge_groups)
     except ValueError as e:
@@ -90,6 +94,8 @@ async def convert(
         polygons=polygons,
         rings=rings == "true",
         shape_tol=shape_tol,
+        geometry_fit=geometry_fit == "auto",
+        fit_tol=fit_tol,
         groups=groups,
         base=base,
     )
