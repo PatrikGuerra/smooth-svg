@@ -1,6 +1,6 @@
 # Shape review of PR #4 (done)
 
-PR: see the link at the bottom. Branch `feat/shape-review`, base `feat/svg-geometry-fit` (PR #3). It replaces PR #4. Not merged.
+PR: https://github.com/PatrikGuerra/smooth-svg/pull/5. Branch `feat/shape-review`, base `feat/svg-geometry-fit` (PR #3). It replaces PR #4. Not merged.
 
 ## What I compared
 
