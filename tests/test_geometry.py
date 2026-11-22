@@ -1,4 +1,5 @@
 import io
+import re
 
 import cv2
 import numpy as np
@@ -73,3 +74,18 @@ def test_tiny_circle_is_not_an_arc():
     ring = lambda r: np.c_[50 + r * np.cos(t), 50 + r * np.sin(t)]
     assert _arc_ok(ring(1.9), 0.8, 500) is None
     assert _arc_ok(ring(30), 0.8, 500) is not None
+
+
+def test_logo_has_no_tile_worse_than_baseline():
+    # catches lumps and lost arcs that SSIM and the total error average away (PR #4 first try)
+    import json
+
+    from shape_tiles import BASE, LOGO, tile_errors
+
+    from smoothsvg.pipeline import convert_image, load
+
+    img = load(LOGO)
+    svg = convert_image(img)[0]
+    now, base = tile_errors(svg, img), np.array(json.loads(BASE.read_text()))
+    assert (now <= base * 1.15 + 20).all(), np.argwhere(now > base * 1.15 + 20)[:5]
+    assert len(re.findall(r"[Aa]\d", svg)) >= 86  # PR #3 had 88; the soften try had 83
