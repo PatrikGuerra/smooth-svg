@@ -125,6 +125,7 @@ untick it.
 | Remove small spots | Spots smaller than this many pixels (1 to 1024) melt into the color around them |
 | Exact circles and ellipses | Round blobs become `<circle>` and `<ellipse>`. On by default |
 | Exact straight-edge shapes | Blobs with 3 to 8 straight sides become `<polygon>`. Off by default |
+| Rings & arcs | Rings (the letter o) become one `<path>` of two ellipse arcs, circles that another layer partly hides become `<circle>`/`<ellipse>`, and outlines made of lines and round corners use `A` arcs. On by default |
 | Shape match (1 to 15 %) | How far a blob may differ from a perfect shape and still be replaced |
 | Back to default | Resets every control |
 | Compare with an SVG… | Loads an SVG from another tool. The button next to it switches the right side between the two |
@@ -203,7 +204,10 @@ The table is in `smoothsvg/presets.py` and the rules are in `smoothsvg/classify.
    gap shows between touching colors. Near its own border that overlap is pulled back, otherwise two
    separately fitted outlines leave a thin line of the lower color along the edge.
 5. **Find exact shapes.** A piece that overlaps a circle, ellipse or polygon by at least 100 minus the
-   tolerance (in percent) is written as that SVG shape.
+   tolerance (in percent) is written as that SVG shape. With Rings & arcs on, three more cases follow:
+   a blob whose outline and holes are ellipses becomes one evenodd path (so the hole still shows what is
+   below it), a circle cut by a later piece is fitted to its visible edge only (RANSAC), and an outline
+   that splits into straight runs and circle arcs is written with `A` commands.
 6. **Trace and shrink.** vtracer's binary mode traces each remaining piece into spline curves, and
    scour writes the SVG with relative coordinates and short numbers.
 
@@ -237,8 +241,9 @@ Timing on the author's Windows PC: about 3 s for the 1.5 megapixel project logo,
   bands, and the photo model is only a best effort.
 - Very small details can vanish at high Smooth levels or below Min area.
 - Images over 16 megapixels are refused. Upscaling stops at about 2.5 megapixels of work.
-- A circle that another shape partly covers is not recognized as a circle, because its visible
-  outline is not one. A ring joined to a handle is not recognized either.
+- A circle that another shape covers is found only if the piece under it is the bigger one, because
+  pieces are stacked by size. Rings and arcs must fit within Shape match; a ring joined to a handle,
+  or a letter that is only roughly oval, stays a traced curve.
 - Removing the background on an image with no clear border color removes the wrong color.
 - Polygon detection can flatten curvy pixel art, which is why it is off by default.
 
@@ -248,6 +253,7 @@ Timing on the author's Windows PC: about 3 s for the 1.5 megapixel project logo,
 smoothsvg/
   __main__.py     command line, bench, --ui, --app
   app.py          app mode: local server on a free port and a native window (pywebview)
+  geometry.py     rings, partly hidden circles and arc outlines (Rings & arcs)
   updater.py      daily update check, download and SHA256 check (app mode only)
   pipeline.py     the steps, convert_array and convert_image
   presets.py      the model table

@@ -9,7 +9,7 @@ let groups = []; // manual merges [{from:[hex..], to:hex, neo?}]; "neo" = final 
 // "Remove small spots" moves in steps, because 1 px and 1000 px both matter.
 const SPOTS = [1, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
 const SLIDERS = ["colors", "merge", "smooth", "corner", "curve", "spots", "tol"];
-const LOCKED_BY_DRAWING = ["colors", "merge", "corner", "curve", "spots", "tol", "ellipses", "polygons"];
+const LOCKED_BY_DRAWING = ["colors", "merge", "corner", "curve", "spots", "tol", "ellipses", "polygons", "rings"];
 
 // ---------- controls ----------
 
@@ -78,6 +78,7 @@ function resetAll() {
   $("denoise").checked = true;
   $("ellipses").checked = true;
   $("polygons").checked = false;
+    $("rings").checked = true;
   $("tol").value = 3;
   setLevel("balanced");
 }
@@ -86,7 +87,7 @@ function setDrawingLock(on) {
   drawingLock = on;
   $("drawingNote").hidden = !on;
   document.querySelectorAll("[data-locks]").forEach((el) => el.classList.toggle("muted", on));
-  ["ellipses", "polygons", "colors_auto", "corner_auto", "curve_auto", "spots_auto"].forEach((id) => ($(id).disabled = on));
+  ["ellipses", "polygons", "rings", "colors_auto", "corner_auto", "curve_auto", "spots_auto"].forEach((id) => ($(id).disabled = on));
   showAll();
 }
 
@@ -220,6 +221,7 @@ async function run() {
   fd.append("denoise", $("denoise").checked);
   fd.append("ellipses", $("ellipses").checked);
   fd.append("polygons", $("polygons").checked);
+  fd.append("rings", $("rings").checked);
   try {
     let res;
     try { res = await fetch("/api/convert", { method: "POST", body: fd }); }
@@ -319,7 +321,7 @@ SLIDERS.forEach((id) => {
   });
 });
 document.querySelectorAll("#levels button").forEach((b) => (b.onclick = () => setLevel(b.dataset.level)));
-["bg", "denoise", "ellipses", "polygons"].forEach((id) => ($(id).onchange = run));
+["bg", "denoise", "ellipses", "polygons", "rings"].forEach((id) => ($(id).onchange = run));
 $("model").onchange = () => setLevel("balanced");
 $("reset").onclick = resetAll;
 

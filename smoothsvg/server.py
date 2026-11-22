@@ -48,6 +48,7 @@ async def convert(
     denoise: bool = Form(True),
     ellipses: bool = Form(True),
     polygons: bool = Form(False),
+    rings: str = Form("true"),
     shape_tol: float = Form(3.0),
     merge_groups: str = Form(""),
 ):
@@ -64,6 +65,8 @@ async def convert(
             and 0.5 <= shape_tol <= 20):
         raise HTTPException(
             400, "merge_de 0-60, corner 0-180, detail 0-20, min_area >= 0, shape_tol 0.5-20")
+    if rings not in ("true", "false"):
+        raise HTTPException(400, "rings must be true or false")
     try:
         groups = parse_groups(merge_groups)
     except ValueError as e:
@@ -85,6 +88,7 @@ async def convert(
         clean=denoise,
         ellipses=ellipses,
         polygons=polygons,
+        rings=rings == "true",
         shape_tol=shape_tol,
         groups=groups,
         base=base,
