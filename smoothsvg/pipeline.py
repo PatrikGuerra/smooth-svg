@@ -6,10 +6,12 @@ import numpy as np
 import vtracer
 from PIL import Image, ImageOps
 
+from . import svgfit
 from .classify import classify
 from .drawing import trace_drawing, trace_layers, trace_stacked
 from .presets import MODELS, PRESETS
 from .quantize import merge_groups, quantize
+from .score import flatten
 from .smooth import border_color, denoise, fit_viewbox, level, remove_islands, shrink, upscale
 
 ALLOWED = {".png", ".jpg", ".jpeg"}
@@ -67,7 +69,8 @@ def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smoot
                   min_area: int | None = None, remove_bg: bool = False, merge_de: float = 10.0,
                   corner: int | None = None, detail: int | None = None, clean: bool = True,
                   tracer: str = "layers", ellipses: bool = True, polygons: bool = False, rings: bool = True,
-                  shape_tol: float = 3.0, groups=(), base=None, **opts):
+                  shape_tol: float = 3.0, groups=(), base=None, geometry_fit: bool = True,
+                  fit_tol: float = 0.35, **opts):
     """Smooth, quantize to a flat palette, clean, drop disabled colors, trace, shrink.
 
     Returns (svg, palette). min_area and filter_speckle are in original pixels.
@@ -78,6 +81,8 @@ def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smoot
     for exact SVG shapes. shape_tol: percent of mismatch allowed (3 means 97% overlap).
     groups: manual merges [([hex, ...], hex)] from quantize.parse_groups, applied after merge_de.
     base: optional list that receives the palette before the groups, so a UI can list the colors to join.
+    geometry_fit: last pass over the SVG that swaps stretches of outline that are circles or
+    ellipses for exact arcs (svgfit); fit_tol is its tolerance in pixels of the source image.
     """
     h, w = img.shape[:2]
     q, palette = _quantized(img, colors, bool(smooth) and clean, merge_de)
@@ -114,7 +119,10 @@ def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smoot
                f'height="{q.shape[0]}">{trace_stacked(q, pal_rgb, **vt)}</svg>')
     else:
         svg = trace(q, **opts)
-    return shrink(fit_viewbox(svg, w, h, q.shape[1], q.shape[0])), palette
+    svg = fit_viewbox(svg, w, h, q.shape[1], q.shape[0])
+    if geometry_fit:
+        svg = svgfit.fit(svg, flatten(img), fit_tol)[0]
+    return shrink(svg), palette
 
 
 def convert_image(img: np.ndarray, model: str = "auto", colors: int | None = None,
@@ -135,6 +143,8 @@ def convert_image(img: np.ndarray, model: str = "auto", colors: int | None = Non
         svg, palette = trace_drawing(img, smooth, opts.get("disabled", ()),
                                      opts.get("remove_bg", False))
         return svg, palette, used
+    if model == "pixelart":
+        opts["geometry_fit"] = False  # stair-steps are not curves; arcs there are false hits
     if opts.get("min_area") is None and "min_area" in pre:
         opts["min_area"] = pre["min_area"]
     svg, palette = convert_array(img, colors=colors, smooth=smooth, **opts)
