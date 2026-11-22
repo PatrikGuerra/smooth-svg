@@ -132,7 +132,7 @@ views.addEventListener("wheel", (e) => {
 
 let drag = null;
 views.addEventListener("pointerdown", (e) => {
-  if (!file || e.target.closest("#drop, .zoombar")) return; // let their buttons get the click
+  if (!file || e.target.closest("#drop, .zoombar, .inbar")) return; // let their buttons get the click
   drag = { x: e.clientX - view.x, y: e.clientY - view.y };
   views.setPointerCapture(e.pointerId);
 });
@@ -143,7 +143,7 @@ views.addEventListener("pointermove", (e) => {
   apply();
 });
 views.addEventListener("pointerup", () => (drag = null));
-views.addEventListener("dblclick", (e) => { if (!e.target.closest(".zoombar")) fit(); });
+views.addEventListener("dblclick", (e) => { if (!e.target.closest(".zoombar, .inbar")) fit(); });
 $("zoomIn").onclick = () => zoomCenter(1.4);
 $("zoomOut").onclick = () => zoomCenter(1 / 1.4);
 $("zoomFit").onclick = fit;
@@ -158,6 +158,24 @@ function setWipe(on) {
 $("viewSide").onclick = () => setWipe(false);
 $("viewWipe").onclick = () => setWipe(true);
 $("wipe").oninput = (e) => document.documentElement.style.setProperty("--wipe", e.target.value + "%");
+
+// ---------- input pane: original or what the tracer is fed ----------
+
+let inView = "orig", origUrl = null, pre = null; // pre: {reduced, upscaled, k, downscaled} of the last conversion
+
+// The pre-processed images are drawn at the original size, so they line up with the SVG.
+function showInput() {
+  document.querySelectorAll("#inViews button").forEach((b) => {
+    b.setAttribute("aria-pressed", b.dataset.in === inView);
+    if (b.dataset.in !== "orig") b.disabled = !pre; // line drawings skip these stages
+  });
+  const img = $("inImg"), url = (pre && inView !== "orig" && pre[inView]) || origUrl;
+  if (url && img.src !== url) img.src = url;
+  if (size) { img.style.width = size.w + "px"; img.style.height = size.h + "px"; }
+  $("kTag").textContent = pre ? "k = " + pre.k : "";
+  $("kTag").title = pre?.downscaled ? t("in_down") : "";
+}
+document.querySelectorAll("#inViews button").forEach((b) => (b.onclick = () => { inView = b.dataset.in; showInput(); }));
 
 // ---------- conversion ----------
 
@@ -240,6 +258,8 @@ async function run() {
       usePreset = false;
     }
     lastResult = data;
+    pre = data.pre;
+    showInput();
     setDrawingLock(data.used.model === "drawing");
     showResult();
     drawPalette(data.palette);
@@ -268,10 +288,15 @@ function setFile(f) {
   $("zoombar").hidden = false;
   const img = $("inImg");
   img.onload = () => {
+    if (img.src !== origUrl) return; // a pre-processed view loaded, size is the original's
     size = { w: img.naturalWidth, h: img.naturalHeight };
+    showInput();
     fit();
   };
-  img.src = URL.createObjectURL(f);
+  origUrl = URL.createObjectURL(f);
+  pre = null;
+  img.removeAttribute("src"); // so onload fires even for the same file
+  showInput();
   run();
 }
 
@@ -350,6 +375,7 @@ $("lang").onchange = (e) => {
   setLang(e.target.value);
   showUpd();
   showAll();
+  showInput();
   if (lastResult) { showResult(); drawPalette(lastResult.palette); renderMerge(); } else setStatus(t("no_image"));
 };
 $("dl").onclick = () => {

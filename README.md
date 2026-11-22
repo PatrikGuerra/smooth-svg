@@ -102,6 +102,8 @@ zoom. Both sides move together.
 
 **Wipe** puts the SVG over the input, with a slider to sweep between them.
 
+The input pane has a switch: **Original**, **Reduced colors** (the flat-color image after quantizing) and **Upscaled** (the exact image handed to the tracer, `k` times larger; `k = N` is shown beside the switch). They refresh on every conversion, and Wipe compares the SVG against the selected one. Line drawings skip these stages, so the two extra views are disabled for them.
+
 ![Wipe mode: the PNG on the left of the line, the SVG on the right](docs/screenshots/ui-wipe.png)
 
 Start with **Detail**. It sets several controls at once: **Simple** gives fewer colors and rounder

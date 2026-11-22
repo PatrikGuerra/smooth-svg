@@ -63,6 +63,10 @@
   .pane .tag { position:absolute; top:6px; left:8px; z-index:3; font-size:12px; pointer-events:none; }
   .layer { position:absolute; left:0; top:0; transform-origin:0 0; }
   #inImg { image-rendering:pixelated; display:block; }
+  .inbar { position:absolute; top:28px; left:8px; z-index:5; display:flex; align-items:center; gap:8px; cursor:default; }
+  .inbar .seg button { padding:3px 9px; font-size:12px; }
+  #kTag { font-size:12px; font-variant-numeric:tabular-nums; background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:2px 8px; }
+  #kTag:empty { display:none; }
   #svgBox svg, #svgBox img { display:block; }
   body.wipe #views { display:block; }
   body.wipe .pane { position:absolute; inset:0; border:0; }
@@ -223,7 +227,11 @@
     <p class="hint" data-i18n="keys"></p>
   </div>
   <div id="views">
-    <div class="pane" id="inPane"><span class="tag" data-i18n="input"></span><div class="layer" id="inLayer"><img id="inImg" alt=""></div></div>
+    <div class="pane" id="inPane"><span class="tag" data-i18n="input"></span><div class="inbar"><div class="seg" id="inViews" role="group" data-i18n-label="in_view">
+      <button type="button" data-in="orig" aria-pressed="true" data-i18n="in_orig"></button>
+      <button type="button" data-in="reduced" aria-pressed="false" data-i18n="in_reduced" disabled></button>
+      <button type="button" data-in="upscaled" aria-pressed="false" data-i18n="in_up" disabled></button>
+    </div><span id="kTag"></span></div><div class="layer" id="inLayer"><img id="inImg" alt=""></div></div>
     <div class="pane" id="outPane"><span class="tag">SVG</span><div class="layer" id="svgBox"></div></div>
     <div id="wipeBar"></div>
     <div class="zoombar" id="zoombar" hidden>
