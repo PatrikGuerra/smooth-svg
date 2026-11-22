@@ -1,9 +1,10 @@
-import re
+﻿import re
 
 import cv2
 import numpy as np
 import potrace
 
+from .geometry import detect_geometry
 from .score import flatten
 from .smooth import level, shrink
 
@@ -137,6 +138,7 @@ def trace_stacked(q: np.ndarray, palette_rgb: np.ndarray, **vt) -> str:
 
     ellipses = vt.pop("ellipses", False)
     polygons = vt.pop("polygons", False)
+    rings = vt.pop("rings", False)
     tol = vt.pop("shape_tol", 0.03)
     inset, collar, bleed = vt.pop("inset", 3), vt.pop("collar", 2), vt.pop("bleed", 2)
     H, W = q.shape[:2]
@@ -181,6 +183,9 @@ def trace_stacked(q: np.ndarray, palette_rgb: np.ndarray, **vt) -> str:
         if ellipses or polygons:
             shape, found = detect_shapes(shape, fill, ellipses, polygons, tol, ox=x0, oy=y0)
         out.extend(found)
+        if rings and shape.any():
+            shape, found = detect_geometry(shape, own, later, fill, tol, ox=x0, oy=y0)
+            out.extend(found)
         if not shape.any():
             continue
         framed = np.pad(shape, 2)  # a margin, so outlines at the crop edge close properly
