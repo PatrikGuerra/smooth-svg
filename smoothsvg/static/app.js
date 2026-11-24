@@ -9,7 +9,7 @@ let groups = []; // manual merges [{from:[hex..], to:hex, neo?}]; "neo" = final 
 // "Remove small spots" moves in steps, because 1 px and 1000 px both matter.
 const SPOTS = [1, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
 const SLIDERS = ["colors", "merge", "smooth", "corner", "curve", "spots", "tol"];
-const LOCKED_BY_DRAWING = ["colors", "merge", "corner", "curve", "spots", "tol", "ellipses", "polygons"];
+const LOCKED_BY_DRAWING = ["colors", "merge", "corner", "curve", "spots", "tol", "ellipses", "polygons", "soft"];
 
 // ---------- controls ----------
 
@@ -76,6 +76,7 @@ function resetAll() {
   $("model").value = "auto";
   $("bg").checked = false;
   $("denoise").checked = true;
+  $("soft").checked = true;
   $("ellipses").checked = true;
   $("polygons").checked = false;
   $("tol").value = 3;
@@ -86,7 +87,7 @@ function setDrawingLock(on) {
   drawingLock = on;
   $("drawingNote").hidden = !on;
   document.querySelectorAll("[data-locks]").forEach((el) => el.classList.toggle("muted", on));
-  ["ellipses", "polygons", "colors_auto", "corner_auto", "curve_auto", "spots_auto"].forEach((id) => ($(id).disabled = on));
+  ["ellipses", "polygons", "soft", "colors_auto", "corner_auto", "curve_auto", "spots_auto"].forEach((id) => ($(id).disabled = on));
   showAll();
 }
 
@@ -236,6 +237,7 @@ async function run() {
   fd.append("merge_groups", groups.length ? JSON.stringify(groups.map(({ from, to }) => ({ from, to }))) : "");
   fd.append("remove_bg", $("bg").checked);
   fd.append("denoise", $("denoise").checked);
+  fd.append("soft_edges", $("soft").checked);
   fd.append("ellipses", $("ellipses").checked);
   fd.append("polygons", $("polygons").checked);
   try {
@@ -344,7 +346,7 @@ SLIDERS.forEach((id) => {
   });
 });
 document.querySelectorAll("#levels button").forEach((b) => (b.onclick = () => setLevel(b.dataset.level)));
-["bg", "denoise", "ellipses", "polygons"].forEach((id) => ($(id).onchange = run));
+["bg", "denoise", "soft", "ellipses", "polygons"].forEach((id) => ($(id).onchange = run));
 $("model").onchange = () => setLevel("balanced");
 $("reset").onclick = resetAll;
 

@@ -102,7 +102,7 @@ zoom. Both sides move together.
 
 **Wipe** puts the SVG over the input, with a slider to sweep between them.
 
-The input pane has a switch: **Original**, **Reduced colors** (the flat-color image after quantizing) and **Upscaled** (the exact image handed to the tracer, `k` times larger; `k = N` is shown beside the switch). They refresh on every conversion, and Wipe compares the SVG against the selected one. Line drawings skip these stages, so the two extra views are disabled for them.
+The input pane has a switch: **Original**, **Reduced colors** (the flat-color image after quantizing) and **Upscaled** (the exact image handed to the tracer, `k` times larger; `k = N` is shown beside the switch; k is lowered only when the enlarged image would not fit in the free memory). They refresh on every conversion, and Wipe compares the SVG against the selected one. Line drawings skip these stages, so the two extra views are disabled for them.
 
 ![Wipe mode: the PNG on the left of the line, the SVG on the right](docs/screenshots/ui-wipe.png)
 
@@ -117,6 +117,7 @@ untick it.
 | Type of image | Auto (default), Logo / clipart, Line drawing, Pixel art, Photo |
 | Remove background | Makes the color around the edge transparent |
 | Clean noise | Smooths JPG noise before the colors are picked. Turn it off for crisp pixel art |
+| Soft edges | On by default. The picture is enlarged first and each edge pixel picks only between the colors next to it, so the soft (antialiased) edge pixels place the edge and no blend color appears. Off cuts the edges from the flat colors only. Not used for line drawings |
 | Number of colors | How many flat colors the SVG uses. Auto picks the smallest number that still looks right |
 | Join similar colors | Colors closer than this become one. Higher means fewer colors |
 | Edit colors… | Opens a small window that floats over the page: drag it by its title bar, close it with the × or Esc. Every color has a switch to turn it off or on. Tick two or more colors and press Join to make one; pick its final color (one of them, or a new one). Undo a group, or press Back to default to clear all. The preview updates by itself about a quarter of a second after each change. Joining runs after "Join similar colors" and is not used for line drawings |

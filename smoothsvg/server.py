@@ -74,6 +74,7 @@ async def convert(
     polygons: bool = Form(False),
     shape_tol: float = Form(3.0),
     merge_groups: str = Form(""),
+    soft_edges: str = Form("true"),
 ):
     data = await file.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
@@ -88,6 +89,8 @@ async def convert(
             and 0.5 <= shape_tol <= 20):
         raise HTTPException(
             400, "merge_de 0-60, corner 0-180, detail 0-20, min_area >= 0, shape_tol 0.5-20")
+    if soft_edges not in ("true", "false"):
+        raise HTTPException(400, "soft_edges must be true or false")
     try:
         groups = parse_groups(merge_groups)
     except ValueError as e:
@@ -114,6 +117,7 @@ async def convert(
         groups=groups,
         base=base,
         pre=pre,
+        soft=soft_edges == "true",
     )
     stats = score(img, svg, (time.perf_counter() - t) * 1000)
     out = {"svg": svg, "stats": stats, "palette": palette, "base": base or palette, "used": used,

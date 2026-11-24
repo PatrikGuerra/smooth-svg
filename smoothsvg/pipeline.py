@@ -67,7 +67,7 @@ def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smoot
                   min_area: int | None = None, remove_bg: bool = False, merge_de: float = 10.0,
                   corner: int | None = None, detail: int | None = None, clean: bool = True,
                   tracer: str = "layers", ellipses: bool = True, polygons: bool = False,
-                  shape_tol: float = 3.0, groups=(), base=None, pre=None, **opts):
+                  shape_tol: float = 3.0, groups=(), base=None, pre=None, soft: bool = False, **opts):
     """Smooth, quantize to a flat palette, clean, drop disabled colors, trace, shrink.
 
     Returns (svg, palette). min_area and filter_speckle are in original pixels.
@@ -80,6 +80,8 @@ def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smoot
     base: optional list that receives the palette before the groups, so a UI can list the colors to join.
     pre: optional dict that receives what the tracer is fed: "reduced" (flat colors, original size),
     "upscaled" (the exact image traced, with alpha), "k" (its upscale factor) and "palette".
+    soft: soft edges. The original (cleaned like for the colors) is enlarged and each pixel picks
+    only among the palette colors next to it, so antialiased edge pixels still place the edge.
     """
     h, w = img.shape[:2]
     q, palette = _quantized(img, colors, bool(smooth) and clean, merge_de)
@@ -95,7 +97,8 @@ def convert_array(img: np.ndarray, colors: int | None = None, disabled=(), smoot
         disabled.add(bg)
     if pre is not None:
         pre["reduced"] = q.copy()
-    q, k = upscale(q, pal_rgb, smooth) if len(pal_rgb) else (q, 1)
+    src = (denoise(img) if smooth and clean else img) if soft else None
+    q, k = upscale(q, pal_rgb, smooth, src) if len(pal_rgb) else (q, 1)
     for hx in disabled:
         q[(q[..., :3] == [int(hx[i:i + 2], 16) for i in (1, 3, 5)]).all(axis=2), 3] = 0
     if pre is not None:
