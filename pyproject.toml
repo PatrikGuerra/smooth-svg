@@ -13,7 +13,7 @@ requires-python = ">=3.12"
 dependencies = [
   "vtracer", "potracer", "Pillow", "numpy", "opencv-python-headless",
   "scour", "resvg-py",
-  "fastapi", "uvicorn", "python-multipart",
+  "fastapi", "uvicorn", "python-multipart", "psutil",
 ]
 
 [project.optional-dependencies]
